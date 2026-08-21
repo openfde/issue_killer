@@ -1,0 +1,13 @@
+.git/
+.DS_Store
+fde-manifests/
+sources/
+.fde-ai/
+data/
+config/openfde-ai-server.json
+.env
+.env.*
+__pycache__/
+*.py[cod]
+.idea/
+.vscode/

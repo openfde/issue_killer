@@ -1,0 +1,27 @@
+[Unit]
+Description=OpenFDE AI 问题扫描器
+Wants=network-online.target
+After=network-online.target
+ConditionPathExists=/opt/openfde-ai/app/config/openfde-ai-server.json
+
+[Service]
+Type=oneshot
+User=openfde-ai
+Group=openfde-ai
+WorkingDirectory=/opt/openfde-ai/app
+EnvironmentFile=-/etc/openfde-ai/openfde-ai.env
+UMask=0077
+ExecStart=/usr/bin/flock -n /opt/openfde-ai/app/data/scan.lock /usr/bin/python3 automation/openfde_ai_server.py --workspace . --config config/openfde-ai-server.json scan
+TimeoutStartSec=35min
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/opt/openfde-ai/app/data /opt/openfde-ai/app/.fde-ai
+ReadOnlyPaths=/opt/openfde-ai/app
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+LockPersonality=true
+MemoryDenyWriteExecute=true
+
+[Install]
+WantedBy=multi-user.target

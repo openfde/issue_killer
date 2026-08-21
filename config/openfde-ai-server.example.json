@@ -1,0 +1,17 @@
+{
+  "profile": "profiles/openfde/profile.json",
+  "data_root": "data",
+  "pi_command": "pi",
+  "scan": {
+    "state": "open",
+    "sync_page_size": 100,
+    "max_issues_per_run": 20,
+    "max_workers_per_run": 1
+  },
+  "worker": {
+    "execute": true,
+    "timeout_seconds": 1800,
+    "retry_limit": 2,
+    "max_atomic_steps_per_issue": 16
+  }
+}

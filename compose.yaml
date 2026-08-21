@@ -1,0 +1,36 @@
+services:
+  scanner:
+    build:
+      context: .
+    image: openfde-ai-assistant:pi
+    init: true
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,noexec,mode=1777
+    environment:
+      HOME: /tmp
+      GH_TOKEN: ${GH_TOKEN:?GH_TOKEN must be set in the Docker launcher environment}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:?DEEPSEEK_API_KEY must be set in the Docker launcher environment}
+      SCAN_INTERVAL_SECONDS: ${SCAN_INTERVAL_SECONDS:-1800}
+    volumes:
+      - type: bind
+        source: ./config/openfde-ai-server.json
+        target: /workspace/config/openfde-ai-server.json
+        read_only: true
+      - type: bind
+        source: ./fde-manifests
+        target: /workspace/fde-manifests
+        read_only: true
+      - type: volume
+        source: openfde_ai_state
+        target: /workspace/.fde-ai
+      - type: volume
+        source: openfde_ai_data
+        target: /workspace/data
+    command:
+      - /usr/local/bin/openfde-scan-loop
+
+volumes:
+  openfde_ai_state:
+  openfde_ai_data:

@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "profile_id": "openfde",
+  "display_name": "OpenFDE",
+  "github": {
+    "repository": "openfde/openfde"
+  },
+  "manifest": {
+    "adapter": "android-repo-xml",
+    "path": "fde-manifests/default.xml",
+    "override_rule": "apply include, remove-project, and project elements in source order"
+  },
+  "artifacts": {
+    "run_root": ".fde-ai/issues",
+    "source_cache": ".fde-ai/sources",
+    "knowledge_root": "data/knowledge",
+    "case_root": "data/knowledge/cases",
+    "issue_layout": {
+      "root": ".fde-ai/issues/{issue_number}",
+      "state": "state.json",
+      "required_directories": ["input", "evidence", "analysis", "solution", "patch", "comment", "archive"],
+      "patch": "patch/0001-{slug}.patch"
+    }
+  },
+  "publication": {
+    "mode": "manual_per_issue",
+    "allow_auto_information_requests": true,
+    "dry_run": true,
+    "minimum_confidence": "high",
+    "blocked_labels": ["no-ai-reply"]
+  }
+}
