@@ -20,7 +20,7 @@ OUT_TREE="${OUT_TREE:-/aosp3/out_fde17}"
 [ -d "$OUT_TREE" ] || { echo "缺少构建输出 $OUT_TREE" >&2; exit 2; }
 mkdir -p "$PI_AGENT"
 
-if dk inspect aosp17-ai >/dev/null 2>&1; then
+if dk container inspect aosp17-ai >/dev/null 2>&1; then
     echo "aosp17-ai 容器已存在；使用 docker -H $DOCKER_HOST_SOCK start aosp17-ai 启动"
     exit 0
 fi

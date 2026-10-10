@@ -110,21 +110,40 @@ if [ -f "$SISO_LOCK" ] && ! flock -n "$SISO_LOCK" true 2>/dev/null; then
 fi
 
 TREE_DIR="$WORKSPACE/$TREE"
-[ -d "$TREE_DIR/.git" ] || fail "构建树不存在: $TREE_DIR"
-[ -z "$(git -C "$TREE_DIR" status --porcelain)" ] || fail "构建树不干净，拒绝构建"
-if [ -n "$BASE_COMMIT" ]; then
-    HEAD_COMMIT="$(git -C "$TREE_DIR" rev-parse HEAD)"
-    [ "$HEAD_COMMIT" = "$BASE_COMMIT" ] || fail "base commit 不匹配: HEAD=$HEAD_COMMIT 期望=$BASE_COMMIT"
-fi
+[ -d "$TREE_DIR" ] || fail "构建树不存在: $TREE_DIR"
+{ [ -d "$TREE_DIR/.repo" ] || [ -e "$TREE_DIR/.git" ]; } || fail "构建树缺少 git 元数据（.repo/.git）: $TREE_DIR"
+
+# repo 检出中每个项目目录自身是 git 仓库；定位路径所属项目根。
+repo_of() {
+    local path="$1" dir
+    dir="$(dirname "$path")"
+    while [ -n "$dir" ] && [ "$dir" != "." ] && [ "$dir" != "/" ]; do
+        if [ -e "$TREE_DIR/$dir/.git" ]; then printf '%s' "$dir"; return 0; fi
+        dir="$(dirname "$dir")"
+    done
+    if [ -e "$TREE_DIR/.git" ]; then printf '%s' "."; return 0; fi
+    return 1
+}
 
 PATCH_ABS="$ISSUE_DIR/$PATCH"
 [ -f "$PATCH_ABS" ] || fail "patch 不存在: $PATCH_ABS"
-if [ -n "$PATCH_SHA" ]; then
+if [ -n "$PATCH_SHA256" ]; then
     ACTUAL_SHA="$(sha256sum "$PATCH_ABS" | awk '{print $1}')"
-    [ "$ACTUAL_SHA" = "$PATCH_SHA" ] || fail "patch SHA-256 不匹配"
+    [ "$ACTUAL_SHA" = "$PATCH_SHA256" ] || fail "patch SHA-256 不匹配"
 fi
 PATCH_PATHS="$(git -C "$TREE_DIR" apply --numstat "$PATCH_ABS" 2>/dev/null | awk '{print $3}')"
 [ -n "$PATCH_PATHS" ] || fail "patch 无法解析（git apply --numstat 无输出）"
+
+for path in $PATCH_PATHS; do
+    repo="$(repo_of "$path")" || fail "路径不属于任何 git 项目: $path"
+    rel="${path#"$repo"/}"
+    [ "$repo" = "." ] && rel="$path"
+    [ -z "$(git -C "$TREE_DIR/$repo" status --porcelain -- "$rel")" ] || fail "工作区不干净: $path"
+    if [ -n "$BASE_COMMIT" ]; then
+        head_commit="$(git -C "$TREE_DIR/$repo" rev-parse HEAD)"
+        [ "$head_commit" = "$BASE_COMMIT" ] || fail "base commit 不匹配（$repo）: HEAD=$head_commit 期望=$BASE_COMMIT"
+    fi
+done
 
 REVERTED=0
 revert_patch() {
@@ -134,7 +153,11 @@ revert_patch() {
         note "已回滚 patch"
     else
         for path in $PATCH_PATHS; do
-            git -C "$TREE_DIR" checkout -- "$path" 2>>"$LOG" || true
+            repo="$(repo_of "$path" || true)"
+            [ -n "$repo" ] || continue
+            rel="${path#"$repo"/}"
+            [ "$repo" = "." ] && rel="$path"
+            git -C "$TREE_DIR/$repo" checkout -- "$rel" 2>>"$LOG" || true
         done
         note "git apply -R 失败，已按文件回滚"
     fi

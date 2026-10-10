@@ -22,7 +22,7 @@ gh --version | head -1
 glslangValidator --version 2>/dev/null | head -1 || true
 
 echo "== 挂载自检 =="
-[ -d /workspace/fde-build/.git ] && echo "fde-build OK" || echo "警告: fde-build 未挂载"
-[ -d /workspace/fde-sources/.git ] && echo "fde-sources OK" || echo "警告: fde-sources 未挂载"
+[ -d /workspace/fde-build/.repo ] && echo "fde-build OK" || echo "警告: fde-build 未挂载"
+[ -d /workspace/fde-sources/.repo ] && echo "fde-sources OK" || echo "警告: fde-sources 未挂载"
 
 echo "aosp17-ai 容器自检完成"
