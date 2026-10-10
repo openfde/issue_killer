@@ -1,0 +1,37 @@
+# aosp17-ai: OpenFDE Issue AI 助手运行镜像
+# 基于已构建的 aosp17-builder:latest（Ubuntu 22.04 + AOSP 构建工具链），
+# 叠加 Node + Pi（@earendil-works/pi-coding-agent）、gh 与 glslang。
+# 构建上下文需包含本文件、gh 二进制与 glslang 二进制；见 build-ai-image.sh。
+FROM aosp17-builder:latest
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PI_TELEMETRY=0 \
+    PI_CODING_AGENT_DIR=/workspace/pi-agent
+
+ARG NODE_VERSION=v24.21.0
+ARG PI_VERSION=0.84.2
+
+RUN echo 'force-unsafe-io' > /etc/dpkg/dpkg.cfg.d/unsafe-io \
+ && apt-get update -o Acquire::Retries=3 \
+ && apt-get install -y --no-install-recommends -o DPkg::Options::=--force-unsafe-io \
+    ninja-build pkgconf python3-pip python3-mako python3-packaging python3-yaml python3-pycparser \
+    libunwind8 libarchive-dev libglvnd-dev glslang-tools \
+ && pip3 install meson==1.11.1 -i https://pypi.tuna.tsinghua.edu.cn/simple \
+ && curl -fsSL -o /tmp/node.tar.gz "https://registry.npmmirror.com/-/binary/node/${NODE_VERSION}/node-${NODE_VERSION}-linux-x64.tar.gz" \
+ && tar -xzf /tmp/node.tar.gz -C /usr/local --strip-components=1 \
+ && rm -f /tmp/node.tar.gz \
+ && npm config set registry https://registry.npmmirror.com \
+ && npm install -g --no-audit --no-fund "@earendil-works/pi-coding-agent@${PI_VERSION}" \
+ && npm cache clean --force \
+ && node --version && pi --version \
+ && rm -rf /var/lib/apt/lists/*
+
+COPY gh /usr/local/bin/gh
+COPY glslang /usr/local/bin/glslang
+RUN chmod 0755 /usr/local/bin/gh /usr/local/bin/glslang \
+ && ln -sf /usr/local/bin/glslang /usr/local/bin/glslangValidator \
+ && ln -sf /usr/local/bin/glslang /usr/bin/glslangValidator \
+ && gh --version
+
+WORKDIR /workspace
+CMD ["sleep", "infinity"]

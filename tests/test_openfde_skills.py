@@ -21,6 +21,8 @@ class OpenFdeSkillsTests(unittest.TestCase):
             "propose-fix",
             "draft-patch",
             "validate-patch-artifact",
+            "request-build",
+            "collect-build-artifacts",
             "draft-issue-comment",
             "publish-policy-comment",
             "sync-github-replies",

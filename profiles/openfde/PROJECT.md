@@ -6,4 +6,6 @@ OpenFDE 在 Linux 环境中运行 Android 系统。`fde-manifests/` 是 Android 
 
 人工分析前必须由当前用户显式指定的问题编号或完整 URL；不得从问题列表、旧产物或上下文自行选择。服务器仅可使用受信任的队列记录传入的编号，且不得越过该编号读取问题、附件或源码。
 
-源码检出副本与缓存只读。工作流不得应用补丁、提交、推送、创建 PR、关闭问题、安装、构建、启动或测试。补丁是未经验证的建议；只有策略受控的 `gh issue comment` 可以发布经过脱敏的 Markdown 方案。
+源码检出副本与缓存只读；容器内 `fde-sources/`（只读）与 `fde-build/`（可写构建树）是同一套本地源码。工作流不得应用补丁、提交、推送、创建 PR、关闭问题、安装或测试。补丁是未经验证的建议；只有策略受控的 `gh issue comment` 可以发布经过脱敏的 Markdown 方案。
+
+构建通道仅可通过 profile `build` 配置的授权助手（`deploy/server/fde-ai-build.sh`）在构建树内临时应用 patch 执行：默认 `manual`（人工触发），`auto` 才由 `request-build` 调用；构建后必须回滚补丁，产物记录为构建证据而不是用户验证。

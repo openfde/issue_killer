@@ -10,6 +10,27 @@
     "path": "fde-manifests/default.xml",
     "override_rule": "apply include, remove-project, and project elements in source order"
   },
+  "sources": {
+    "mode": "local_tree",
+    "path": "fde-sources",
+    "build_path": "fde-build",
+    "read_only": true
+  },
+  "build": {
+    "mode": "manual",
+    "helper": "deploy/server/fde-ai-build.sh",
+    "tree": "fde-build",
+    "sources_tree": "fde-sources",
+    "lock": "data/build.lock",
+    "target": "fde_arm64-cp2a-userdebug",
+    "output": "out",
+    "modules": ["systemimage", "vendorimage"],
+    "artifacts": [
+      "target/product/fde_arm64/system.img",
+      "target/product/fde_arm64/vendor.img"
+    ],
+    "max_jobs": 12
+  },
   "artifacts": {
     "run_root": ".fde-ai/issues",
     "source_cache": ".fde-ai/sources",
@@ -18,7 +39,7 @@
     "issue_layout": {
       "root": ".fde-ai/issues/{issue_number}",
       "state": "state.json",
-      "required_directories": ["input", "evidence", "analysis", "solution", "patch", "comment", "archive"],
+      "required_directories": ["input", "evidence", "analysis", "solution", "patch", "build", "comment", "archive"],
       "patch": "patch/0001-{slug}.patch"
     }
   },

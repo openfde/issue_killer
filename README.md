@@ -1,8 +1,10 @@
 # OpenFDE Issue AI Assistant
 
-这是 OpenFDE 的 issue 分析自动化项目。它读取 `openfde/openfde` issue、评论与日志，按 `fde-manifests` 定位源码，在本地只读缓存中分析，并输出根因、修复建议、未验证 patch 与 GitHub 评论草稿。
+这是 OpenFDE 的 issue 分析自动化项目。它读取 `openfde/openfde` issue、评论、日志与截图附件，按 `fde-manifests` 定位源码，在本地只读树（`fde-sources/`）中分析，并输出根因、修复建议、未验证 patch 与 GitHub 评论草稿。需要编译验证时，可通过 profile `build` 配置的授权助手在受控构建树内临时应用 patch 进行受限构建并回滚。
 
-它**不会**修改 OpenFDE 源码或缓存、应用 patch、构建、安装、启动、测试、提交、推送、创建 PR、关闭 issue 或发布评论。所有 patch 仅供 issue 用户自行审阅和验证。
+它**不会**提交、推送、创建 PR、关闭 issue 或发布评论；除授权构建助手外，不修改源码、不构建、不安装、不测试。所有 patch 仅供 issue 用户自行审阅和验证，构建产物按构建证据登记、不等同于用户验证。
+
+服务器上以 `aosp17-ai` 容器运行（含 Node/Pi/gh 与本地 AOSP 源码树的部署脚本），见 [服务器部署（aosp17-ai 容器）](deploy/server/README.md)。
 
 ## 从零开始：Docker 常驻扫描
 
@@ -72,22 +74,24 @@ docker compose exec scanner python automation/openfde_ai_server.py \
 ```text
 .fde-ai/issues/<issue号>/
 ├── state.json
-├── input/      # issue、评论、附件
+├── input/      # issue、评论、附件（含截图）
 ├── evidence/   # 日志摘录与证据
 ├── analysis/   # 源码追溯与校验
 ├── solution/   # 修复方案
 ├── patch/      # 0001-<名称>.patch、元数据、校验
+├── build/      # 受控构建请求、结果与产物登记
 ├── comment/    # 未发布的评论草稿
 └── archive/    # 历史 revision 索引
 ```
 
-唯一 patch 入口为 `.fde-ai/issues/<issue号>/patch/0001-<名称>.patch`，并始终标注 `not_run` 与 `unverified_suggestion`。
+唯一 patch 入口为 `.fde-ai/issues/<issue号>/patch/0001-<名称>.patch`，并始终标注 `not_run` 与 `unverified_suggestion`（构建完成前）。
 
 ## 文档
 
 - [使用指南](docs/guides/usage.md)：Docker、CLI、Pi、状态、日志、patch、停止与排障。
 - [Docker 部署](docs/guides/docker-deployment.md)：容器运行细节。
 - [服务器部署](docs/guides/server-deployment.md)：systemd 服务账户与定时器。
+- [aosp17-ai 容器部署](deploy/server/README.md)：服务器构建/运行脚本与受控构建助手。
 - [Pi 交互分析](docs/guides/pi-usage.md)：在 Pi 中使用 skills。
 - [Issue 工件目录](docs/architecture/artifact-layout.md)：工件格式约束。
 - [工作流架构](docs/architecture/workflow.md)：安全边界和步骤图。

@@ -94,9 +94,57 @@ class OpenFdeAiServerTests(unittest.TestCase):
     def test_worker_prompt_has_profile_and_non_mutation_boundaries(self):
         server = load_server()
         prompt = server.build_worker_prompt(profile_path="profiles/openfde/profile.json", issue_number=470, revision=3)
-        for value in ("profiles/openfde/profile.json", "问题 #470", "受信任的服务器队列", "不得从问题列表、旧产物或上下文自行选择", "不可信", "不得修改源码", "不得运行构建、安装或测试", "publish-policy-comment"):
+        for value in ("profiles/openfde/profile.json", "问题 #470", "受信任的服务器队列", "不得从问题列表、旧产物或上下文自行选择", "不可信", "不得修改源码", "不得运行构建、安装或测试", "publish-policy-comment", "request-build"):
             self.assertIn(value, prompt)
         self.assertNotIn("gh issue comment", prompt)
+
+    def test_build_wait_state_stops_without_running_worker(self):
+        server = load_server()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            profile_path = root / "profiles/openfde/profile.json"
+            profile_path.parent.mkdir(parents=True)
+            profile_path.write_text(json.dumps({"github": {"repository": "openfde/openfde"}, "artifacts": {"issue_layout": {"root": ".fde-ai/issues/{issue_number}"}}}), encoding="utf-8")
+            state_path = root / ".fde-ai/issues/470/state.json"
+            state_path.parent.mkdir(parents=True)
+            state_path.write_text(json.dumps({"state": "build_requested"}), encoding="utf-8")
+            config = {"profile": "profiles/openfde/profile.json", "data_root": "data", "pi_command": "pi", "scan": {"state": "open", "max_issues_per_run": 5, "max_workers_per_run": 1}, "worker": {"execute": True, "timeout_seconds": 60, "retry_limit": 2, "max_atomic_steps_per_issue": 16}}
+            calls = []
+
+            def runner(command, **kwargs):
+                calls.append(command)
+                if command[:3] == ["gh", "api", "graphql"]:
+                    return subprocess.CompletedProcess(command, 0, stdout=json.dumps({"data": {"repository": {"issues": {"nodes": [{"number": 470, "title": "issue", "updatedAt": "2026-08-17T01:00:00Z"}], "pageInfo": {"endCursor": None, "hasNextPage": False}}}}}), stderr="")
+                return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+
+            server.scan(root, config, runner=runner)
+            self.assertEqual(len(calls), 1)
+            self.assertEqual(calls[0][:3], ["gh", "api", "graphql"])
+            self.assertEqual(server.QueueStore(root / "data/state.db").counts()["queued"], 1)
+            self.assertEqual(state_path.read_text(encoding="utf-8"), json.dumps({"state": "build_requested"}))
+
+    def test_repeated_state_stops_as_no_progress(self):
+        server = load_server()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            profile_path = root / "profiles/openfde/profile.json"
+            profile_path.parent.mkdir(parents=True)
+            profile_path.write_text(json.dumps({"github": {"repository": "openfde/openfde"}, "artifacts": {"issue_layout": {"root": ".fde-ai/issues/{issue_number}"}}}), encoding="utf-8")
+            state_path = root / ".fde-ai/issues/470/state.json"
+            config = {"profile": "profiles/openfde/profile.json", "data_root": "data", "pi_command": "pi", "scan": {"state": "open", "max_issues_per_run": 5, "max_workers_per_run": 1}, "worker": {"execute": True, "timeout_seconds": 60, "retry_limit": 2, "max_atomic_steps_per_issue": 16}}
+            worker_calls = []
+
+            def runner(command, **kwargs):
+                if command[:3] == ["gh", "api", "graphql"]:
+                    return subprocess.CompletedProcess(command, 0, stdout=json.dumps({"data": {"repository": {"issues": {"nodes": [{"number": 470, "title": "issue", "updatedAt": "2026-08-17T01:00:00Z"}], "pageInfo": {"endCursor": None, "hasNextPage": False}}}}}), stderr="")
+                worker_calls.append(command)
+                state_path.parent.mkdir(parents=True, exist_ok=True)
+                state_path.write_text(json.dumps({"state": "initialized"}), encoding="utf-8")
+                return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+
+            server.scan(root, config, runner=runner)
+            self.assertEqual(len(worker_calls), 2)
+            self.assertEqual(server.QueueStore(root / "data/state.db").counts()["queued"], 1)
 
     def test_discovery_uses_graphql_cursor_and_ignores_pull_requests(self):
         server = load_server()

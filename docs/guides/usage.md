@@ -2,7 +2,7 @@
 
 本系统分析 `openfde/openfde` issue，按证据下载必要附件、读取 manifest、缓存只读源码，并输出根因分析、修复建议、未验证 patch 和 GitHub 评论草稿。
 
-它绝不修改 OpenFDE 源码或源码缓存，不应用 patch，不构建、不安装、不启动、不测试，不创建 PR，也不发布 GitHub 评论。patch 仅是给 issue 用户自行验证的建议。
+它不修改 OpenFDE 源码或源码缓存，不创建 PR，也不发布 GitHub 评论。唯一例外是 profile `build` 配置声明的授权构建助手：它在受控构建树内临时应用 patch、完成受限构建并在退出前回滚补丁（默认人工触发）。patch 仍是给 issue 用户自行验证的建议。
 
 ## 准备
 
@@ -112,6 +112,7 @@ python3 automation/openfde_ai_server.py \
 ├── analysis/
 ├── solution/
 ├── patch/
+├── build/
 ├── comment/
 └── archive/
 ```
@@ -122,7 +123,13 @@ patch 的唯一入口：
 .fde-ai/issues/<issue号>/patch/0001-<名称>.patch
 ```
 
-它配有 `patch.json`、`validation.json`，其中应明确写有 base commit、SHA-256、证据 claim 和所有 `not_run` 项。评论草稿位于 `comment/github-comment.md`，不会被自动发布。
+它配有 `patch.json`、`validation.json`，其中应明确写有 base commit、SHA-256、证据 claim 和所有 `not_run` 项。评论草稿位于 `comment/github-comment.md`，不会被自动发布。需要编译验证时，先由 `request-build` 写出 `build/build-request.json`，再运行受控构建助手（默认人工）：
+
+```sh
+deploy/server/fde-ai-build.sh --issue 470
+```
+
+构建结果与产物哈希记录在 `build/build-result.json`，`collect-build-artifacts` 校验后写入 `build/artifacts.json`；补丁在构建结束后被助手回滚。
 
 协调器每步的 Pi 输出位于 `data/logs/`；Docker 中为 `/workspace/data/logs/`，可执行：
 
