@@ -3,6 +3,9 @@
 # 用法: /aosp/aosp17-docker/dk exec aosp17-ai bash /workspace/deploy/server/ai-container-setup.sh
 set -e
 
+apt-get update -o Acquire::Retries=3 >/dev/null 2>&1 || true
+apt-get install -y --no-install-recommends -o DPkg::Options::=--force-unsafe-io ripgrep jq
+
 TOOLS=/workspace/fde-build/prebuilts/mesa-tools
 for tool in mesa_clc asahi_clc panfrost_compile vtn_bindgen2; do
     if [ -x "$TOOLS/$tool" ]; then
