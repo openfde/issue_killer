@@ -35,7 +35,7 @@ GitHub（只读 gh）
 
 无论哪种方式，都不得从列表首项、最近问题、旧产物或对话上下文自行选择问题。缺少明确选择时停止并请求选择。
 
-提 issue 之前还有独立的取证通道（`plan-evidence-collection` → `run-evidence-collection` → `validate-intake-package`）：人工给出现象，助手生成采集方案并按只读白名单采集/校验，产物只写 `data/intake/`，不访问 GitHub。详见[取证采集](intake.md)。
+提 issue 之前还有独立的取证通道（`collect-device-evidence`，交互式）：人工给出现象，助手简短评估后引导采集 bugreport/截屏（录屏可选，按需加子系统项），只读执行，产物只写 `data/intake/`，不访问 GitHub。详见[取证采集](intake.md)。
 
 ## 工件位置
 

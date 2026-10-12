@@ -82,25 +82,17 @@ python3 automation/openfde_ai_server.py \
 
 ## 取证采集（提 issue 前）
 
-发现问题和决定提 issue 由人完成；取证助手只做采集辅助，产物在 `data/intake/`，不写 issue 工件目录、不访问 GitHub。
+交互式一步到位：描述现象 → 简短评估 → 引导采集（默认 bugreport+截屏，录屏可选，按需加单条子系统项）。产物在 `data/intake/`，不写 issue 工件目录、不访问 GitHub。
 
 ```text
-/skill:plan-evidence-collection 现象：<一句话，如"连接蓝牙耳机后音频断续">；设备：<型号/版本/IP>；复现时间：<时刻>
+/skill:collect-device-evidence 现象：<一句话，如"连接蓝牙耳机后音频断续">；设备：<型号/版本/IP>；复现时间：<时刻>
 ```
 
-匹配子系统模板后生成 `collection-plan.json`、`collect_pc.sh`、`collect_on_device.sh` 与说明。默认 `server_adb` 通道（设备与服务器网络可达、已开 adb tcp），由人工确认设备序列号后采集：
+助手先 `adb connect` 并列设备等你确认序列号，然后按确认的采集项只读执行（`adb bugreport`、`adb exec-out screencap`、可选 `adb shell screenrecord` + `adb pull`）。打包为 zip（含 `summary.md` 与 SHA-256，≤24MB；超限自动压缩大文本成员）。
 
-```text
-/skill:run-evidence-collection 使用 data/intake/<目录>；目标设备序列号 <adb devices 中确认的序列号>
-```
+服务器连不上设备时，助手直接在对话里给出 PC 端命令（`adb bugreport`、`screencap`、`pull`）自行采集。提 issue 时附 zip+截图，助手不代发。
 
-服务器连不上设备时降级：由测试人员执行 `collect_pc.sh`，或推送 `collect_on_device.sh` 后在设备执行。取证包回传后校验：
-
-```text
-/skill:validate-intake-package 校验 data/intake/<目录>；缺项时输出精确到命令的补充采集请求
-```
-
-只读白名单（`logcat -d`/`dumpsys`/`getprop`/`screencap`/白名单 `pull`），禁止 root、禁止清日志缓冲；默认体积预算 20MB（GitHub 附件单文件 ≤ 25MB）。
+全程只读：禁止 root、禁止 `logcat -c`、禁止安装/卸载/改设置。
 
 ## 浏览与分析一个问题
 
