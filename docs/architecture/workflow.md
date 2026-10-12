@@ -50,7 +50,7 @@ load-project-profile
 → build-project-context
 → fetch-github-issue
 → extract-log-evidence 或 extract-text-evidence
-→ resolve-manifest-components
+→ resolve-manifest-components（低置信时经 confirm-component-mapping 人工确认）
 → cache-provenanced-sources
 → retrieve-knowledge
 → trace-evidence-to-source
@@ -67,7 +67,9 @@ load-project-profile
 
 ## 源码、补丁与验证
 
-`resolve-manifest-components` 按 `fde-manifests/default.xml` 的 `include`、`remove-project` 和 `project` 顺序解析有效组件。`sources.mode=local_tree` 时，`cache-provenanced-sources` 在只读本地树中按组件记录精确 commit 与哈希，不克隆、不拉取；其他模式仅获取匹配组件的精确版本，并保持本地副本只读。
+`resolve-manifest-components` 按三层归属：组件映射知识（种子 + 运行时学习）、本地树信号检索（`fde-sources/` 中命中文件向上寻找最近 `.git`）、`fde-manifests/default.xml` 的 include/remove-project/project 顺序（结构与 revision 事实来源）。低置信或并列候选时停在 `component_review_requested`，由开发人员确认/纠正后经 `confirm-component-mapping` 落库并继续；详见[组件归属](component-attribution.md)。
+
+`sources.mode=local_tree` 时，`cache-provenanced-sources` 在只读本地树中按组件记录精确 commit 与哈希，不克隆、不拉取；其他模式仅获取匹配组件的精确版本，并保持本地副本只读。
 
 补丁建议必须关联已验证的证据、组件、文件、行号和基准提交，且标记为 `not_run`。安装、启动和设备侧测试由用户或 CI 执行；其结果可作为下一版本的证据。构建通道是补丁的受限验证手段而非修复声明：`manual`（默认）下 `request-build` 只写 `build/build-request.json` 并停在 `build_requested`，人工运行 `deploy/server/fde-ai-build.sh --issue <编号>`；`auto` 下由授权助手执行。助手加锁（`data/build.lock` 与 `.siso_lock` 检查）、临时应用 patch、模块增量构建、记录产物哈希到 `build/build-result.json`，并在任何退出路径回滚补丁；`collect-build-artifacts` 校验后推进到 `artifacts_collected`。
 

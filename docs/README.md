@@ -20,6 +20,7 @@
 - [服务器部署与运维](guides/server-deployment.md)：宿主机 systemd 部署。
 - [工作流架构](architecture/workflow.md)：当前流程、证据/源码边界、补丁与知识沉淀。
 - [取证采集](architecture/intake.md)：提 issue 前的三通道采集、体积与安全约束。
+- [组件归属](architecture/component-attribution.md)：三层归属（知识/本地树/manifest）与人工回退闭环。
 - [Issue 工件目录](architecture/artifact-layout.md)：每个 issue 的固定产物位置与唯一 patch 入口。
 - [服务器工作进程](architecture/server-worker.md)：队列、Pi 进程和并发语义。
 - [Server、Pi 与 Skills 执行流程](architecture/server-pi-flow.md)：定时扫描、CLI、Pi 原子 skill 与状态机循环图。

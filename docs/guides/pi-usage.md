@@ -120,6 +120,16 @@ python3 automation/openfde_ai_server.py \
 
 若证据不足，系统应停止猜测，形成只请求版本、环境、复现步骤和相关日志的补充信息草稿。它不应声称已经定位根因。
 
+## 组件归属确认
+
+组件归属优先查 `profiles/openfde/component-map/` 种子与 `data/knowledge/component-map/` 学习条目，再在 `fde-sources/` 检索信号（命中文件向上找最近 `.git`）；拿不准时流程停在 `component_review_requested`，并在 `.fde-ai/issues/<编号>/analysis/component-review.json` 给出候选与依据。开发人员确认后：
+
+```text
+/skill:confirm-component-mapping 该问题属于 <项目名或路径>；依据：<一句话>
+```
+
+确认结果写入最终映射并沉淀到组件映射知识，下次同类信号自动命中；回复“无法确认”时流程停止等待更多信息，不会猜测。
+
 ## 补丁与 GitHub 评论
 
 `draft-patch` 只生成统一 diff 建议及其 base commit、SHA-256、证据 claim 和 `not_run` 说明。它从不修改源码缓存、执行 `git apply`、构建或测试。

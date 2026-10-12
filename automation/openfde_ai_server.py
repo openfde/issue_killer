@@ -16,7 +16,7 @@ from typing import Any, Callable
 
 Runner = Callable[..., subprocess.CompletedProcess[str]]
 TERMINAL_ARTIFACT_STATES = frozenset({"archived", "needs_information", "blocked"})
-WAIT_ARTIFACT_STATES = frozenset({"build_requested", "build_failed"})
+WAIT_ARTIFACT_STATES = frozenset({"build_requested", "build_failed", "component_review_requested"})
 
 
 def utc_now() -> str:
@@ -184,7 +184,7 @@ def build_worker_prompt(*, profile_path: str, issue_number: int, revision: int) 
 不得修改源码或缓存。不得应用补丁、提交、推送、创建 PR 或关闭问题。
 不得运行构建、安装或测试；构建只能经 `request-build` 按 profile `build` 配置调用授权助手（默认人工触发），失败时记录并停止。
 GitHub 只能通过 `gh` 访问。除非 `publish-policy-comment` 独立确认全部发布门槛，否则不得发布评论。
-首次调用必须先创建 `.fde-ai/issues/{issue_number}/state.json`，唯一状态字段名为 `state`，值为 `initialized`；之后每次只推进一个合法原子步骤。保存可审计产物；在 `archived`、`needs_information`、`blocked`、`build_requested`、`build_failed` 或第一次非法状态转换时停止。
+首次调用必须先创建 `.fde-ai/issues/{issue_number}/state.json`，唯一状态字段名为 `state`，值为 `initialized`；之后每次只推进一个合法原子步骤。保存可审计产物；在 `archived`、`needs_information`、`blocked`、`build_requested`、`build_failed`、`component_review_requested` 或第一次非法状态转换时停止。
 """
 
 
