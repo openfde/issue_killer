@@ -80,6 +80,28 @@ python3 automation/openfde_ai_server.py \
 
 协调器连续推进同一 issue 的原子步骤；只有 `archived`、`needs_information`、`blocked` 才是完成终态。Pi 或 patch 均不等同于问题已修复。生产环境的 `systemd` 部署、服务账户和凭据隔离见[服务器部署指南](server-deployment.md)。
 
+## 取证采集（提 issue 前）
+
+发现问题和决定提 issue 由人完成；取证助手只做采集辅助，产物在 `data/intake/`，不写 issue 工件目录、不访问 GitHub。
+
+```text
+/skill:plan-evidence-collection 现象：<一句话，如"连接蓝牙耳机后音频断续">；设备：<型号/版本/IP>；复现时间：<时刻>
+```
+
+匹配子系统模板后生成 `collection-plan.json`、`collect_pc.sh`、`collect_on_device.sh` 与说明。默认 `server_adb` 通道（设备与服务器网络可达、已开 adb tcp），由人工确认设备序列号后采集：
+
+```text
+/skill:run-evidence-collection 使用 data/intake/<目录>；目标设备序列号 <adb devices 中确认的序列号>
+```
+
+服务器连不上设备时降级：由测试人员执行 `collect_pc.sh`，或推送 `collect_on_device.sh` 后在设备执行。取证包回传后校验：
+
+```text
+/skill:validate-intake-package 校验 data/intake/<目录>；缺项时输出精确到命令的补充采集请求
+```
+
+只读白名单（`logcat -d`/`dumpsys`/`getprop`/`screencap`/白名单 `pull`），禁止 root、禁止清日志缓冲；默认体积预算 20MB（GitHub 附件单文件 ≤ 25MB）。
+
 ## 浏览与分析一个问题
 
 先只浏览完整 issue 清单：

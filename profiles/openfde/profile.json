@@ -31,6 +31,13 @@
     ],
     "max_jobs": 12
   },
+  "intake": {
+    "root": "data/intake",
+    "templates": "profiles/openfde/intake-templates",
+    "size_budget_mb": 20,
+    "default_channel": "server_adb",
+    "allow_root": false
+  },
   "artifacts": {
     "run_root": ".fde-ai/issues",
     "source_cache": ".fde-ai/sources",

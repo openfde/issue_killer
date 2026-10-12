@@ -31,9 +31,11 @@ GitHub（只读 gh）
 | 方式 | 入口 | 选择规则 |
 | --- | --- | --- |
 | 人工交互 | Pi 的 `/skill:run-issue-workflow` | 当前用户必须明确提供问题编号或完整 URL。 |
-| 服务器扫描 | `automation/openfde_ai_server.py scan --execute` | 仅处理受信任队列领取的编号。 |
+| 服务器扫描 | `automation/openfde_ai_server.py scan --execute` | 仅接受受信任队列领取的编号。 |
 
 无论哪种方式，都不得从列表首项、最近问题、旧产物或对话上下文自行选择问题。缺少明确选择时停止并请求选择。
+
+提 issue 之前还有独立的取证通道（`plan-evidence-collection` → `run-evidence-collection` → `validate-intake-package`）：人工给出现象，助手生成采集方案并按只读白名单采集/校验，产物只写 `data/intake/`，不访问 GitHub。详见[取证采集](intake.md)。
 
 ## 工件位置
 

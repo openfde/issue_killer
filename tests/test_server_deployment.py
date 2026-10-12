@@ -13,6 +13,7 @@ class ServerDeploymentTests(unittest.TestCase):
         self.assertIn("FROM aosp17-builder:latest", dockerfile)
         self.assertIn("registry.npmmirror.com", dockerfile)
         self.assertIn("@earendil-works/pi-coding-agent", dockerfile)
+        self.assertIn("android-tools-adb", dockerfile)
         self.assertIn("/usr/local/bin/gh", dockerfile)
         self.assertIn("PI_CODING_AGENT_DIR=/workspace/pi-agent", dockerfile)
 

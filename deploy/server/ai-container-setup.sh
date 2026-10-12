@@ -19,6 +19,7 @@ echo "== 工具版本 =="
 node --version
 pi --version
 gh --version | head -1
+adb version 2>/dev/null | head -1 || true
 glslangValidator --version 2>/dev/null | head -1 || true
 
 echo "== 挂载自检 =="

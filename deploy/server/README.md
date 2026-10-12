@@ -6,7 +6,7 @@
 
 | 文件 | 运行位置 | 作用 |
 | --- | --- | --- |
-| `Dockerfile.ai` | 服务器 | `FROM aosp17-builder:latest`，叠加 Node、Pi、gh、glslang。 |
+| `Dockerfile.ai` | 服务器 | `FROM aosp17-builder:latest`，叠加 Node、Pi、gh、adb、glslang。 |
 | `build-ai-image.sh` | 服务器 | 收集 `gh`/`glslang` 到构建上下文并构建 `aosp17-ai:latest`。 |
 | `run-ai-container.sh` | 服务器 | 创建并启动 `aosp17-ai` 容器（挂载工作区、源码树、构建输出）。 |
 | `ai-container-setup.sh` | 容器内 | 建立 mesa-tools 软链接并自检 python 模块与工具版本。 |
