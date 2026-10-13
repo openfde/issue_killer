@@ -11,16 +11,42 @@ description: 当交互用户希望通过原子 skill 启动、恢复或检查一
 
 允许的顺序为 `load-project-profile` → `build-project-context` → `fetch-github-issue` → 一个证据分支 → `resolve-manifest-components`（低置信时经 `confirm-component-mapping` 人工确认）→ `cache-provenanced-sources` → `retrieve-knowledge` → `trace-evidence-to-source` → `verify-analysis` → `propose-fix` → 可选的 `draft-patch` / `validate-patch-artifact` → 配置了 `build` 时 `request-build` → `collect-build-artifacts` → `draft-issue-comment` → `archive-case`。
 
-每完成一个原子 skill 后，**必须在对话中输出固定格式的步骤汇报**（只写产物文件而不汇报视为本步未完成），调用方无需再另行打开文件查看：
+**汇报与交互规范（人工交互模式）**：不逐步汇报所有原子步骤——加载配置、构建上下文、拉取 issue、证据提取、知识检索、引用校验等机械步骤内部连续执行，最多一句话带过（服务器队列模式仍按其提示词每次只推进一个原子步骤）。只在以下**关键节点**停下汇报，并给出 A/B/C 选项等待选择：
+
+1. **定位结论**：证据提取与组件归属完成——问题落在哪个组件的哪个功能；
+2. **根因结论**：分析校验通过——一句话根因 + 因果链要点；
+3. **修复方案**：推荐改法与替代方案、风险（`not_run`）；
+4. **代码修改**：**用统一 diff 直接展示修改**（引用 patch 文件的关键 hunk，不得只给路径），并逐处说明修改目的；
+5. **校验结果**：补丁结构与来源校验的通过项/问题项；
+6. **评论草稿**：草稿路径与要点。
+
+关键节点汇报格式（结论在前、简洁）：
 
 ```text
-步骤：<skill 名称>｜<旧状态> → <新状态>
-产物：<产物相对路径（可多行）>
-结论：<1~3 句关键结论，含关键文件/行号/证据引用>
-下一步：<下一个原子步骤；需要人工做的事；或终止原因>
+【<节点名>】<一句话结论，直白说明问题/结果>
+依据：<1~3 条，含 文件:行号 或日志时间戳或证据 ID>
+产物：<产物相对路径>
+
+下一步（回复 A/B/C）：
+A. <动作>
+B. <动作>
+C. <动作>
 ```
 
-到达等待态（`build_requested`/`build_failed`/`component_review_requested`）或终态（`archived`/`needs_information`/`blocked`）时，同样在汇报中明确写出原因、已产出的文件位置与恢复方式；不得以省略汇报的方式结束本轮。
+示例：
+
+```text
+【根因结论】筛选条件在窗口退出时没有被清空：provider 忽略了 name==null 的复位请求。
+依据：AllAppsProvider.kt:40-42（仅 name!=null 时覆盖 filter）；AppOverviewWindow.kt:417（退出时传 null）；日志 02:17:05.902 仍按旧关键字过滤
+产物：.fde-ai/issues/491/analysis/analysis.md
+
+下一步（回复 A/B/C）：
+A. 继续生成修复方案
+B. 先展示该窗口相关代码片段
+C. 暂停本轮
+```
+
+到达等待态（`component_review_requested`/`build_requested`/`build_failed`）或终态（`archived`/`needs_information`/`blocked`）时，同样给出 A/B/C 选项（含继续方式/恢复命令）并说明原因，不得沉默结束需要人工决策的步骤。
 
 构建通道只允许通过 profile `build.helper` 声明的授权助手执行：`manual`（默认）只写 `build/build-request.json` 并停在 `build_requested`，等待人工运行助手；`auto` 才可调用助手。助手在受控构建树内临时应用 patch，构建后必须回滚，不得手工修改源码、应用 diff 或运行构建命令。`build_requested` 期间不得重复构建；`build_failed` 时记录失败并停止，交由人工处理。
 
