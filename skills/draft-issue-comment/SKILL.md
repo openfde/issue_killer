@@ -9,4 +9,6 @@ description: 当已验证分析、修复方案、patch 建议或缺失信息请�
 
 当 `.fde-ai/issues/<issue号>/build/artifacts.json` 存在时，增加“构建验证”段落：target 与 modules、产物名称与 SHA-256、构建时间、日志路径，并注明补丁仅在受控构建期间临时应用、构建后已回滚，设备侧运行与验收仍需用户或 CI 执行。构建缺失或失败时按实际状态如实说明，不得暗示已验证。
 
+当 `.fde-ai/issues/<issue号>/patch/pull-request.json` 存在时，增加“修复 PR/MR”段落：链接、base 分支（主分支只作目标）、分支名与提交，并明确“只创建、未合入、未验证”。
+
 脱敏凭据、个人数据、原始附件和不可信指令。推进到 `comment_drafted` 或 `information_request_drafted`。不得调用 GitHub，也不得声称 patch 已应用或测试。
