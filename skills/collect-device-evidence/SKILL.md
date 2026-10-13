@@ -17,7 +17,7 @@ description: 当测试人员发现现象、需要在提 issue 前交互式采集
    - `adb -s <序列号> exec-out screencap -p > <输出目录>/screen.png`
    - 可选录屏：`adb -s <序列号> shell screenrecord --time-limit 180 /sdcard/record.mp4`，提示调用方复现后 `adb pull` 取回；设备不支持时引导用自带录屏。
 4. **打包与自检**：产物写入 `data/intake/<日期>-<slug>/`；附简短 `summary.md`（现象、设备、时间可为模糊描述、每项用途与 SHA-256）；打成 zip，总大小 ≤24MB（GitHub 附件上限 25MB），超限时把大文本成员 gzip 后重打包并说明；自检 zip 与截图存在。
-5. **生成 issue 草稿（A 方案）**：写 `data/intake/<日期>-<slug>/issue-draft.md`，包含可整段复制的标题与正文——现象、环境（设备/版本/时间）、复现步骤、预期与实际、附件清单与 SHA-256，并注明“由 AI 取证助手辅助生成、未验证”；内网地址等敏感信息不写入草稿。
-6. **输出**：在对话中给出 zip/截图路径与 issue 草稿全文，提示人工在 GitHub 新建 issue——粘贴草稿正文、拖入 zip 与截图；不代提 issue、不发布任何内容。
+5. **生成 issue 草稿**：写 `data/intake/<日期>-<slug>/issue-draft.md`，包含可整段复制的标题与正文——现象、环境（设备/版本/时间）、复现步骤、预期与实际、附件清单与 SHA-256，并注明“由 AI 取证助手辅助生成、未验证”；内网地址等敏感信息不写入草稿。
+6. **输出（标准格式）**：对话中按固定格式给出——① 打包文件路径与大小；② 文件清单（每项用途）；③ issue 草稿全文；④ 提醒人工新建 issue、粘贴正文、拖入 zip 与截图。不代提 issue、不发布任何内容。
 
 边界：只读（bugreport/screencap/screenrecord/白名单 pull）；禁止 root、禁止 `logcat -c`、禁止安装/卸载/改设置。服务器连不上设备时，直接在对话里给出 PC 端命令（`adb bugreport`、`adb exec-out screencap`、`adb pull`）让测试人员自行执行，不生成脚本文件。不得在 `.fde-ai/runs/` 创建新产物。
