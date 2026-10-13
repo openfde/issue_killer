@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 
-Runner = Callable[..., subprocess.CompletedProcess[str]]
+Runner = Callable[..., subprocess.CompletedProcess]
 TERMINAL_ARTIFACT_STATES = frozenset({"archived", "needs_information", "blocked"})
 WAIT_ARTIFACT_STATES = frozenset({"build_requested", "build_failed", "component_review_requested"})
 

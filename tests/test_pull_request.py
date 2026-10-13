@@ -1,3 +1,4 @@
+import json
 import unittest
 from pathlib import Path
 
@@ -6,6 +7,14 @@ ROOT = Path(__file__).parents[1]
 
 
 class PullRequestTests(unittest.TestCase):
+    def test_profile_declares_the_pull_request_target(self):
+        profile = json.loads((ROOT / "profiles/openfde/profile.json").read_text(encoding="utf-8"))
+
+        pull_request = profile["pull_request"]
+        self.assertTrue(pull_request["enabled"])
+        self.assertEqual(pull_request["provider"], "gitlab")
+        self.assertEqual(pull_request["base_branch"], "fde_17")
+
     def test_skill_creates_a_merge_request_without_merging(self):
         content = (ROOT / "skills/create-fix-pull-request/SKILL.md").read_text(encoding="utf-8")
 

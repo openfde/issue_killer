@@ -60,5 +60,10 @@
     "dry_run": true,
     "minimum_confidence": "high",
     "blocked_labels": ["no-ai-reply"]
+  },
+  "pull_request": {
+    "enabled": true,
+    "provider": "gitlab",
+    "base_branch": "fde_17"
   }
 }
