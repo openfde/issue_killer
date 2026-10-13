@@ -63,7 +63,7 @@
   },
   "pull_request": {
     "enabled": true,
-    "provider": "gitlab",
+    "provider": "github",
     "base_branch": "fde_17"
   }
 }

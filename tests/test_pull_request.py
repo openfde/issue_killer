@@ -12,13 +12,13 @@ class PullRequestTests(unittest.TestCase):
 
         pull_request = profile["pull_request"]
         self.assertTrue(pull_request["enabled"])
-        self.assertEqual(pull_request["provider"], "gitlab")
+        self.assertEqual(pull_request["provider"], "github")
         self.assertEqual(pull_request["base_branch"], "fde_17")
 
-    def test_skill_creates_a_merge_request_without_merging(self):
+    def test_skill_creates_a_pull_request_without_merging(self):
         content = (ROOT / "skills/create-fix-pull-request/SKILL.md").read_text(encoding="utf-8")
 
-        for value in ("merge_request.create", "fde_17", "只创建", "不合入", "pull_request_created", "data/pr-work", "git apply --check"):
+        for value in ("gh pr create", "github.com/openfde", "fde_17", "只创建", "不合入", "pull_request_created", "data/pr-work", "git apply --check"):
             self.assertIn(value, content, value)
 
     def test_workflow_and_context_allow_the_confirmed_pr_step(self):

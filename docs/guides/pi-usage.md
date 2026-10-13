@@ -134,7 +134,7 @@ python3 automation/openfde_ai_server.py \
 
 只有 `publish-policy-comment` 可以执行外部写入，且只能使用 `gh issue comment`。交互模式默认逐条确认；服务器批量模式只有在项目配置已启用 `auto_when_eligible`、通过去重、脱敏、置信度、标签、限额和停用开关检查后，才允许自动发布。无论哪种模式，评论都必须声明：AI 生成、补丁未应用/未验证、由用户自行测试。
 
-补丁校验通过后，关键节点会提供“生成 PR/MR”选项：`create-fix-pull-request` 在独立工作区（`data/pr-work/`）克隆目标仓库、校验并应用补丁、推送 `ai/issue-<编号>-<slug>` 分支，并以 GitLab push options 创建 MR（默认目标 `fde_17` 主分支；**只创建、不合入**；已存在的分支追加后缀，不强推）。MR 链接记录在 `patch/pull-request.json`，并写入评论草稿的“修复 PR/MR”段落。
+补丁校验通过后，关键节点会提供“生成 PR”选项：`create-fix-pull-request` 在独立工作区（`data/pr-work/`）克隆 GitHub 仓库（openfde org，按清单项目名拼装 URL）、校验并应用补丁、推送 `ai/issue-<编号>-<slug>` 分支，并用 `gh pr create` 创建 PR（默认目标 `fde_17` 主分支；**只创建、不合入**；不强推、不覆盖已有分支）。PR 链接记录在 `patch/pull-request.json`，并写入评论草稿的“修复 PR/MR”段落。
 
 ## 受控构建（可选）
 
