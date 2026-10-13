@@ -11,6 +11,17 @@ description: 当交互用户希望通过原子 skill 启动、恢复或检查一
 
 允许的顺序为 `load-project-profile` → `build-project-context` → `fetch-github-issue` → 一个证据分支 → `resolve-manifest-components`（低置信时经 `confirm-component-mapping` 人工确认）→ `cache-provenanced-sources` → `retrieve-knowledge` → `trace-evidence-to-source` → `verify-analysis` → `propose-fix` → 可选的 `draft-patch` / `validate-patch-artifact` → 配置了 `build` 时 `request-build` → `collect-build-artifacts` → `draft-issue-comment` → `archive-case`。
 
+每完成一个原子 skill 后，**必须在对话中输出固定格式的步骤汇报**（只写产物文件而不汇报视为本步未完成），调用方无需再另行打开文件查看：
+
+```text
+步骤：<skill 名称>｜<旧状态> → <新状态>
+产物：<产物相对路径（可多行）>
+结论：<1~3 句关键结论，含关键文件/行号/证据引用>
+下一步：<下一个原子步骤；需要人工做的事；或终止原因>
+```
+
+到达等待态（`build_requested`/`build_failed`/`component_review_requested`）或终态（`archived`/`needs_information`/`blocked`）时，同样在汇报中明确写出原因、已产出的文件位置与恢复方式；不得以省略汇报的方式结束本轮。
+
 构建通道只允许通过 profile `build.helper` 声明的授权助手执行：`manual`（默认）只写 `build/build-request.json` 并停在 `build_requested`，等待人工运行助手；`auto` 才可调用助手。助手在受控构建树内临时应用 patch，构建后必须回滚，不得手工修改源码、应用 diff 或运行构建命令。`build_requested` 期间不得重复构建；`build_failed` 时记录失败并停止，交由人工处理。
 
 组件归属低置信或存在并列候选时，`resolve-manifest-components` 停在 `component_review_requested` 并写 `analysis/component-review.json`；必须由开发人员给出结论，再由 `confirm-component-mapping` 写入最终映射并沉淀到组件映射知识，然后继续。评审前不得自行猜测归属或重复检索。
