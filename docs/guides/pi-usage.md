@@ -88,7 +88,7 @@ python3 automation/openfde_ai_server.py \
 /skill:collect-device-evidence 现象：<一句话，如"连接蓝牙耳机后音频断续">；设备：<型号/版本/IP>；复现时间：<时刻>
 ```
 
-助手先 `adb connect` 并列设备等你确认序列号，然后按确认的采集项只读执行（`adb bugreport`、`adb exec-out screencap`、可选 `adb shell screenrecord` + `adb pull`）。打包为 zip（含 `summary.md` 与 SHA-256，≤24MB；超限自动压缩大文本成员）。
+助手先 `adb connect` 并列设备等你确认序列号；**收到你的明确确认前不会开抓**——现场复现时，复现完发“复现完成”它才立即采集。然后按确认的采集项只读执行（`adb bugreport`、`adb exec-out screencap`、可选 `adb shell screenrecord` + `adb pull`）。打包为 zip（含 `summary.md` 与 SHA-256，≤24MB；超限自动压缩大文本成员）。
 
 服务器连不上设备时，助手直接在对话里给出 PC 端命令（`adb bugreport`、`screencap`、`pull`）自行采集。
 
