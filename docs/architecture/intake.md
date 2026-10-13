@@ -9,7 +9,7 @@
 3. 设备连接保持现状：服务器 `adb connect <IP>:5555` → 列 `adb devices` → 人工确认序列号（多设备显式 `-s`，不得自动挑选）；
 4. 只读采集：`adb bugreport`、`adb exec-out screencap`、可选 `adb shell screenrecord` + `adb pull`；全程禁止 root、禁止 `logcat -c`、禁止安装/卸载/改设置；
 5. 打包：`data/intake/<日期>-<slug>/` 内生成 zip（含简短 `summary.md`：现象、设备、时间、用途、SHA-256），总大小 ≤24MB（GitHub 附件上限 25MB），超限时把大文本成员 gzip 后重打包并说明；
-6. 人工新建 issue 并附 zip+截图；助手不代提、不发布。
+6. 生成 issue 草稿：写 `issue-draft.md`（可整段复制的标题+正文+哈希，内网地址不写入）；人工在 GitHub 新建 issue——粘贴草稿、拖入 zip+截图；助手不代提、不发布。
 
 ## 降级
 

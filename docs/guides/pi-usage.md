@@ -90,7 +90,9 @@ python3 automation/openfde_ai_server.py \
 
 助手先 `adb connect` 并列设备等你确认序列号，然后按确认的采集项只读执行（`adb bugreport`、`adb exec-out screencap`、可选 `adb shell screenrecord` + `adb pull`）。打包为 zip（含 `summary.md` 与 SHA-256，≤24MB；超限自动压缩大文本成员）。
 
-服务器连不上设备时，助手直接在对话里给出 PC 端命令（`adb bugreport`、`screencap`、`pull`）自行采集。提 issue 时附 zip+截图，助手不代发。
+服务器连不上设备时，助手直接在对话里给出 PC 端命令（`adb bugreport`、`screencap`、`pull`）自行采集。
+
+采集完成后助手自动生成 `issue-draft.md`（标题+正文+哈希，内网地址不外泄）：在 GitHub 新建 issue，粘贴草稿正文、拖入 zip 与截图即可，助手不代提 issue、不代发。
 
 全程只读：禁止 root、禁止 `logcat -c`、禁止安装/卸载/改设置。
 
