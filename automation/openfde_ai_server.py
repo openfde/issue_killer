@@ -188,10 +188,14 @@ GitHub 只能通过 `gh` 访问。除非 `publish-policy-comment` 独立确认�
 """
 
 
-def write_worker_log(data_root: Path, issue_number: int, revision: int, output: str) -> Path:
+def worker_log_path(data_root: Path, issue_number: int, revision: int) -> Path:
     logs = data_root / "logs"
     logs.mkdir(parents=True, exist_ok=True)
-    log = logs / f"issue-{issue_number}-revision-{revision}-{utc_now().replace(':', '')}.log"
+    return logs / f"issue-{issue_number}-revision-{revision}-{utc_now().replace(':', '')}.log"
+
+
+def write_worker_log(data_root: Path, issue_number: int, revision: int, output: str) -> Path:
+    log = worker_log_path(data_root, issue_number, revision)
     log.write_text(output, encoding="utf-8")
     return log
 
@@ -202,13 +206,27 @@ def run_worker(root: Path, config: dict[str, Any], claimed: dict[str, Any], *, r
     if not command:
         raise ValueError("pi_command must not be empty")
     command += ["--no-session", "--skill", str((root / "skills/run-issue-workflow").resolve()), "-p", build_worker_prompt(profile_path=config["profile"], issue_number=claimed["issue_number"], revision=claimed["revision"])]
+    timeout = int(config["worker"]["timeout_seconds"])
+    if runner is subprocess.run and config["worker"].get("stream_logs", True):
+        log = worker_log_path(data_root, claimed["issue_number"], claimed["revision"])
+        with log.open("w", encoding="utf-8") as handle:
+            process = subprocess.Popen(command, cwd=root, text=True, stdout=handle, stderr=subprocess.STDOUT)
+            try:
+                return_code = process.wait(timeout=timeout)
+                error = None
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait()
+                return_code = 124
+                error = f"worker timed out after {timeout} seconds"
+        return return_code, log, error
     try:
-        result = runner(command, cwd=root, text=True, capture_output=True, timeout=int(config["worker"]["timeout_seconds"]), check=False)
+        result = runner(command, cwd=root, text=True, capture_output=True, timeout=timeout, check=False)
         output = (result.stdout or "") + ("\n" if result.stdout and result.stderr else "") + (result.stderr or "")
         return result.returncode, write_worker_log(data_root, claimed["issue_number"], claimed["revision"], output), None
     except subprocess.TimeoutExpired as error:
         output = (error.stdout.decode() if isinstance(error.stdout, bytes) else error.stdout or "") + (error.stderr.decode() if isinstance(error.stderr, bytes) else error.stderr or "")
-        return 124, write_worker_log(data_root, claimed["issue_number"], claimed["revision"], output), f"worker timed out after {config['worker']['timeout_seconds']} seconds"
+        return 124, write_worker_log(data_root, claimed["issue_number"], claimed["revision"], output), f"worker timed out after {timeout} seconds"
 
 
 def artifact_state(root: Path, profile: dict[str, Any], issue_number: int) -> str:
