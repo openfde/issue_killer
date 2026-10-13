@@ -1,5 +1,6 @@
 # 本地源码检出、问题证据与运行数据
 sources/
+fde-sources/
 .fde-ai/
 data/
 fde-manifests/
