@@ -106,6 +106,14 @@ class QueueStore:
     def claim_issue(self, issue_number: int, retry_limit: int = 2) -> dict[str, Any] | None:
         return self._claim("issue_number = ? AND state = 'queued'", (issue_number,), retry_limit)
 
+    def requeue(self, issue_number: int) -> bool:
+        with self.connect() as connection:
+            row = connection.execute("SELECT issue_number FROM issue_queue WHERE issue_number = ?", (issue_number,)).fetchone()
+            if row is None:
+                return False
+            connection.execute("UPDATE issue_queue SET state='queued', attempts=0, started_at=NULL, finished_at=NULL, worker_exit_code=NULL, worker_log=NULL, last_error=NULL, claimed_updated_at=NULL WHERE issue_number = ?", (issue_number,))
+            return True
+
     def finish(self, issue_number: int, revision: int, *, exit_code: int, terminal: bool = True, retry_limit: int = 2, worker_log: str | None = None, error: str | None = None) -> None:
         with self.connect() as connection:
             row = connection.execute("SELECT * FROM issue_queue WHERE issue_number = ?", (issue_number,)).fetchone()
@@ -333,6 +341,8 @@ def main() -> int:
     worker_parser.add_argument("--issue", type=int, required=True)
     analyze_parser = commands.add_parser("analyze")
     analyze_parser.add_argument("--issue", type=int, required=True)
+    requeue_parser = commands.add_parser("requeue")
+    requeue_parser.add_argument("--issue", type=int, required=True)
     commands.add_parser("status")
     args = parser.parse_args()
     root = Path(args.workspace).resolve()
@@ -349,10 +359,15 @@ def main() -> int:
             store.upsert_issue(fetch_selected_issue(profile["github"]["repository"], args.issue))
         claimed = store.claim_issue(args.issue, int(config["worker"]["retry_limit"]))
         if claimed is None:
-            raise SystemExit(f"issue {args.issue} is not queued")
+            raise SystemExit(f"issue {args.issue} is not queued (previous run may be interrupted or finished); run: requeue --issue {args.issue} then retry")
         exit_code, log, error = process_claim(root, config, profile, store, claimed)
         print(json.dumps({"issue": args.issue, "exit_code": exit_code, "log": str(log.relative_to(root)), "error": error}))
         return exit_code
+    elif args.command == "requeue":
+        store.initialize()
+        if not store.requeue(args.issue):
+            raise SystemExit(f"issue {args.issue} is not in the queue")
+        print(json.dumps({"issue": args.issue, "state": "queued"}, sort_keys=True))
     else:
         store.initialize(); print(json.dumps(store.counts(), sort_keys=True))
     return 0

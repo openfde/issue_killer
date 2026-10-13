@@ -125,6 +125,21 @@ class OpenFdeAiServerTests(unittest.TestCase):
                     self.assertEqual(server.QueueStore(root / "data/state.db").counts()["queued"], 1)
                     self.assertEqual(state_path.read_text(encoding="utf-8"), json.dumps({"state": wait_state}))
 
+    def test_requeue_resets_a_stuck_or_finished_issue(self):
+        server = load_server()
+        with tempfile.TemporaryDirectory() as directory:
+            store = server.QueueStore(Path(directory) / "state.db")
+            store.initialize()
+            store.upsert_issue({"number": 491, "title": "t", "updatedAt": "2026-08-17T01:00:00Z"})
+            claimed = store.claim_next()
+            assert claimed is not None
+            self.assertIsNone(store.claim_next())
+            self.assertTrue(store.requeue(491))
+            again = store.claim_next()
+            self.assertIsNotNone(again)
+            self.assertEqual(again["issue_number"], 491)
+            self.assertFalse(store.requeue(999))
+
     def test_repeated_state_stops_as_no_progress(self):
         server = load_server()
         with tempfile.TemporaryDirectory() as directory:
