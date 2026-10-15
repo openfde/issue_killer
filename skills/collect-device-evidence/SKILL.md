@@ -21,7 +21,7 @@ description: 当测试人员发现现象、需要在提 issue 前交互式采集
    - `adb -s <序列号> exec-out screencap -p > <输出目录>/screen.png`
    - 可选录屏：`adb -s <序列号> shell screenrecord --time-limit 180 /sdcard/record.mp4`，提示调用方复现后 `adb pull` 取回；设备不支持时引导用自带录屏。
 5. **打包与自检**：产物写入 `data/intake/<日期>-<slug>/`；附简短 `summary.md`（现象、设备、时间可为模糊描述、每项用途与 SHA-256）；打成 zip，总大小 ≤24MB（GitHub 附件上限 25MB），超限时把大文本成员 gzip 后重打包并说明；自检 zip 与截图存在。
-6. **生成 issue 草稿**：写 `data/intake/<日期>-<slug>/issue-draft.md`，标题固定为 `<现象摘要>（<系统版本号>）`——版本号取 bugreport 文件名中的版本段（如 `CP2A.260605.016`）或 `getprop ro.build.display.id`；正文包含现象、环境（设备/版本/时间）、复现步骤、预期与实际、附件清单与 SHA-256，并注明“由 AI 取证助手辅助生成、未验证”；内网地址等敏感信息不写入草稿。
+6. **生成 issue 草稿**：写 `data/intake/<日期>-<slug>/issue-draft.md`，标题固定为 `<现象摘要>（<系统版本号>）`——版本号取 bugreport 文件名中的版本段（如 `CP2A.260605.016`）或 `getprop ro.build.display.id`；正文包含现象、环境（设备/版本/时间）、复现步骤、预期与实际、附件清单（只列文件名与用途，**不写 SHA-256**；哈希保留在本地 `summary.md`），并注明“由 AI 取证助手辅助生成、未验证”；内网地址等敏感信息不写入草稿。
 7. **输出（标准格式）**：对话中按固定格式给出——① 打包文件路径与大小；② 文件清单（每项用途）；③ issue 草稿全文（标题含系统版本号）；④ 提 issue 提醒（粘贴正文、拖入 zip 与截图）；⑤ 最后附**本机拉取附件的 scp 命令**（服务器绝对路径），便于马上下载后提交 issue：
    `scp huyang@10.31.62.29:/aosp/aosp17-ai/workspace/data/intake/<slug>.zip <本机目录>`
    `scp huyang@10.31.62.29:/aosp/aosp17-ai/workspace/data/intake/<slug>/screen.png <本机目录>`
