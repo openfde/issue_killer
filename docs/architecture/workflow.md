@@ -57,7 +57,7 @@ load-project-profile
 → verify-analysis
 → propose-fix
 → 可选 draft-patch / validate-patch-artifact
-→ 可选 create-fix-pull-request（人工确认；只创建 PR，不合入）
+→ 可选 create-fix-pull-request（人工确认；只创建 PR，不合入；跨多个项目时按项目分别创建）
 → 配置了 build 时 request-build（manual 等待人工 / auto 经授权助手）
 → collect-build-artifacts
 → draft-issue-comment
@@ -76,13 +76,13 @@ load-project-profile
 
 `sources.mode=local_tree` 时，`cache-provenanced-sources` 在只读本地树中按组件记录精确 commit 与哈希，不克隆、不拉取；其他模式仅获取匹配组件的精确版本，并保持本地副本只读。
 
-补丁建议必须关联已验证的证据、组件、文件、行号和基准提交，且标记为 `not_run`。安装、启动和设备侧测试由用户或 CI 执行；其结果可作为下一版本的证据。补丁经人工在关键节点确认后，可由 `create-fix-pull-request` 在独立工作区应用、推送 `ai/` 分支并以 MR/PR 形式提交（**只创建、不合入主分支**），供开发人员查看、修改与合入。构建通道是补丁的受限验证手段而非修复声明：`manual`（默认）下 `request-build` 只写 `build/build-request.json` 并停在 `build_requested`，人工运行 `deploy/server/fde-ai-build.sh --issue <编号>`；`auto` 下由授权助手执行。助手加锁（`data/build.lock` 与 `.siso_lock` 检查）、临时应用 patch、模块增量构建、记录产物哈希到 `build/build-result.json`，并在任何退出路径回滚补丁；`collect-build-artifacts` 校验后推进到 `artifacts_collected`。
+补丁建议必须关联已验证的证据、组件、文件、行号和基准提交，且标记为 `not_run`。安装、启动和设备侧测试由用户或 CI 执行；其结果可作为下一版本的证据。补丁经人工在关键节点确认后，可由 `create-fix-pull-request` 在独立工作区应用、推送 `ai/` 分支并以 MR/PR 形式提交（**只创建、不合入主分支**），供开发人员查看、修改与合入；修复跨多个项目时按项目分别创建 PR，并由评论的“修复 PR/MR”段落附上全部链接。PR 说明与评论落款统一使用“由 AI 修复助手生成”，且不得写出内部产物路径。构建通道是补丁的受限验证手段而非修复声明：`manual`（默认）下 `request-build` 只写 `build/build-request.json` 并停在 `build_requested`，人工运行 `deploy/server/fde-ai-build.sh --issue <编号>`；`auto` 下由授权助手执行。助手加锁（`data/build.lock` 与 `.siso_lock` 检查）、临时应用 patch、模块增量构建、记录产物哈希到 `build/build-result.json`，并在任何退出路径回滚补丁；`collect-build-artifacts` 校验后推进到 `artifacts_collected`。
 
 ## GitHub 读取与发布
 
 GitHub 访问统一使用 `gh`。读取使用 `gh issue` 或只读 `gh api`；唯一允许的外部写入是经过 `publish-policy-comment` 策略检查后的 `gh issue comment`。
 
-交互模式默认逐条确认。服务器批量模式只有在项目配置显式启用自动发布、完成去重/脱敏/置信度/标签/限额/停用开关检查后才可评论。评论必须说明：由 AI 生成、补丁未应用且未验证、需要用户自行测试。
+交互模式默认逐条确认。服务器批量模式只有在项目配置显式启用自动发布、完成去重/脱敏/置信度/标签/限额/停用开关检查后才可评论。评论必须说明：由 AI 修复助手生成、补丁未应用且未验证、需要用户自行测试；正文与落款不得写出内部产物路径或“分析产物”字样。
 
 ## 知识沉淀
 

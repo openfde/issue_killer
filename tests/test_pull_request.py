@@ -41,6 +41,34 @@ class PullRequestTests(unittest.TestCase):
         self.assertIn("pull-request.json", content)
         self.assertIn("只创建、未合入、未验证", content)
 
+    def test_multi_project_fixes_create_one_pull_request_per_project(self):
+        content = (ROOT / "skills/create-fix-pull-request/SKILL.md").read_text(encoding="utf-8")
+
+        for value in ("多个项目", "分别生成", "pull_requests", "每个项目一个", "全部 PR 链接"):
+            self.assertIn(value, content, value)
+
+    def test_comment_lists_every_project_pull_request_link(self):
+        content = (ROOT / "skills/draft-issue-comment/SKILL.md").read_text(encoding="utf-8")
+
+        for value in ("pull_requests", "逐个列出", "单项目"):
+            self.assertIn(value, content, value)
+
+    def test_published_texts_use_fixed_fix_assistant_footer_without_internal_paths(self):
+        draft = (ROOT / "skills/draft-issue-comment/SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("*由 AI 修复助手生成、未验证；内容仅供参考，不代表已验证结论。*", draft)
+        self.assertIn("不得写出 `.fde-ai/`、`data/` 等内部产物路径", draft)
+        self.assertIn("“分析产物”字样", draft)
+
+        pull_request = (ROOT / "skills/create-fix-pull-request/SKILL.md").read_text(encoding="utf-8")
+        self.assertIn(
+            "*由 AI 修复助手生成、未构建未测试（not_run）、未合入；内容仅供参考。*",
+            pull_request,
+        )
+        self.assertIn("不得写出 `.fde-ai/`、`data/` 等内部产物路径", pull_request)
+
+        publish = (ROOT / "skills/publish-policy-comment/SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("no_internal_paths", publish)
+
 
 if __name__ == "__main__":
     unittest.main()

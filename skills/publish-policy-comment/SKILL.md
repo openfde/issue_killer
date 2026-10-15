@@ -5,7 +5,7 @@ description: 当 GitHub issue 评论草稿符合策略门槛可以发布，或�
 
 # 按策略发布评论
 
-仅接收评论草稿和 profile 发布策略。任何写入前，校验目标仓库、marker 去重、脱敏结果、标签、限额、停用文件、认证和所需置信度。patch 建议必须包含明确的未验证声明和 `not_run` 列表。
+仅接收评论草稿和 profile 发布策略。任何写入前，校验目标仓库、marker 去重、脱敏结果、标签、限额、停用文件、认证、所需置信度和 `no_internal_paths`（正文与落款不含 `.fde-ai/`、`data/` 等内部产物路径及“分析产物”字样，marker 除外，落款为固定文案）。patch 建议必须包含明确的未验证声明和 `not_run` 列表。
 
 **交互评论自动发布**：草稿带 `openfde-ai:escalation` marker（求助），或属于“修复交付/验证征询”（含 PR/MR 链接或验证征询段落）时，若 profile `publication.interaction_comments=auto` 且全部门槛通过，可直接发布；其余评论仍遵循 `dry_run`/人工确认路径。
 
