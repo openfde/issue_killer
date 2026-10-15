@@ -18,9 +18,9 @@ description: 当已校验的补丁建议需要以分支+PR 形式提交到 GitHu
 
 1. 浅克隆目标仓库到独立工作区并检出 base：`git clone --depth 1 --single-branch --branch <base> https://github.com/openfde/<项目名>.git <workdir>`（HTTPS 凭据由已配置的 `gh auth setup-git` 提供）。
 2. 校验并应用补丁：先 `git apply --check <patch>`（失败即停止），再应用；用 `git status --porcelain` 核对仅补丁涉及文件变更，偏差即停止。
-3. 提交（作者标注为助手）：`git -c user.name="pi-agent" -c user.email="pi-agent@openfde.local" commit -m "fix: <issue 标题> (openfde/openfde#<编号>)" -m "由 AI 助手生成的修复建议：未构建、未测试（not_run）；关联问题 openfde/openfde#<编号>。"`。
+3. 提交（作者标注为助手）：`git -c user.name="pi-agent" -c user.email="pi-agent@openfde.local" commit -m "fix: <issue 标题> (openfde/openfde#<编号>)" -m "由 AI 修复助手生成的修复建议：未构建、未测试（not_run）；关联问题 openfde/openfde#<编号>。"`。
 4. 推送分支：`git push origin HEAD:refs/heads/<分支>`。
-5. 创建 PR（gh 已登录）：`gh pr create --repo openfde/<项目名> --base <base> --head <分支> --title "fix: <标题> (#<编号>)" --body-file <说明文件>`；说明文件由 `solution/solution.md` 摘要生成，注明“AI 生成、未构建未测试、未合入”。从输出捕获 PR 链接；推送或创建失败时报告分支状态与 GitHub 页面链接后停止。
+5. 创建 PR（gh 已登录）：`gh pr create --repo openfde/<项目名> --base <base> --head <分支> --title "fix: <标题> (#<编号>)" --body-file <说明文件>`；说明文件由 `solution/solution.md` 摘要生成，开头与结尾均须注明“由 AI 修复助手生成、未构建未测试（not_run）、未合入”。从输出捕获 PR 链接；推送或创建失败时报告分支状态与 GitHub 页面链接后停止。
 6. 记录 `patch/pull-request.json`：provider、repo、base、branch、commit、url、created_at、`merged: false`；`state.json` 增加 `pull_request` 引用，把 `state` 推进到 `pull_request_created`。
 7. 关键节点汇报：PR 链接、分支、base、diff 摘要（`git show --stat`）、未验证声明，并明确“只创建、未合入”。
 

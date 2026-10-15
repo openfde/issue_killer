@@ -29,6 +29,13 @@ class PullRequestTests(unittest.TestCase):
         self.assertIn("create-fix-pull-request", context)
         self.assertIn("只创建不合入", context)
 
+    def test_disclaimers_use_the_fix_assistant_role_name(self):
+        draft = (ROOT / "skills/draft-issue-comment/SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("由 AI 修复助手生成", draft)
+
+        pull_request = (ROOT / "skills/create-fix-pull-request/SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("由 AI 修复助手生成", pull_request)
+
     def test_comment_draft_references_pull_request_when_present(self):
         content = (ROOT / "skills/draft-issue-comment/SKILL.md").read_text(encoding="utf-8")
         self.assertIn("pull-request.json", content)
