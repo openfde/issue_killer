@@ -57,9 +57,13 @@
   "publication": {
     "mode": "manual_per_issue",
     "allow_auto_information_requests": true,
+    "interaction_comments": "auto",
     "dry_run": true,
     "minimum_confidence": "high",
     "blocked_labels": ["no-ai-reply"]
+  },
+  "replies": {
+    "poll_seconds": 180
   },
   "pull_request": {
     "enabled": true,

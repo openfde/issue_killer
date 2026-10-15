@@ -23,6 +23,7 @@ class OpenFdeSkillsTests(unittest.TestCase):
             "validate-patch-artifact",
             "create-fix-pull-request",
             "confirm-component-mapping",
+            "escalate-issue",
             "request-build",
             "collect-build-artifacts",
             "collect-device-evidence",

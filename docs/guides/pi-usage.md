@@ -96,6 +96,12 @@ python3 automation/openfde_ai_server.py \
 
 全程只读：禁止 root、禁止 `logcat -c`、禁止安装/卸载/改设置。
 
+## 求助与验证闭环
+
+- 分析受阻时，助手会生成带 **A/B/C 选项**的求助评论（`publication.interaction_comments=auto` 时自动发布），并停在 `awaiting_direction`；你直接在 issue 里回复选项或自由文本指出方向即可，助手轮询读取后继续；
+- 交付修复（评论含“验证征询”）后停在 `awaiting_verification`：你自测后回复 `验证通过`，或 `仍有问题`（附新日志/截图）——"仍有问题"会开启新 revision 重新分析，`验证通过` 收敛为 `confirmed_fixed` 并归档（issue 关闭仍由人工完成）；
+- 轮询：`deploy/reply-poll.sh` 默认每 3 分钟检查一次新回复（`REPLY_POLL_SECONDS` 或 profile `replies.poll_seconds` 可调整）；无新回复时不消耗模型调用。
+
 ## 浏览与分析一个问题
 
 先只浏览完整 issue 清单：
