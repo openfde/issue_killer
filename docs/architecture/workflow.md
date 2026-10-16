@@ -66,7 +66,7 @@ load-project-profile
 → confirmed_fixed → archive-case
 ```
 
-分析受阻时可调用 `escalate-issue` 发布带 A/B/C 的求助评论并停在 `awaiting_direction`；开发人员的回复由 `sync-github-replies` 按内容宽容解析：选项/方向 → 带方向继续（`direction_received`）；仍有问题+证据 → 新 revision 重新分析；验证通过 → `confirmed_fixed` 收敛归档。issue 关闭始终由人工完成。
+分析受阻或耗时超预算（同一目标约 10 分钟无进展）时，`escalate-issue` 发布带 A/B/C 的求助评论并停在 `awaiting_direction`；开发人员的回复由 `sync-github-replies` 按内容宽容解析：选项/方向 → 带方向继续（`direction_received`）；仍有问题+证据 → 新 revision 重新分析；验证通过 → `confirmed_fixed` 收敛归档。issue 关闭始终由人工完成。
 
 证据不足、状态校验失败或需要人工信息时，流程进入 `needs_information` 或 `blocked`，而不是猜测根因。开发者新增回复、新日志或用户测试失败会创建新的分析版本，不覆盖旧证据。
 

@@ -16,7 +16,7 @@ class InteractionLoopTests(unittest.TestCase):
     def test_escalation_skill_publishes_options_and_waits(self):
         content = (ROOT / "skills/escalate-issue/SKILL.md").read_text(encoding="utf-8")
 
-        for value in ("openfde-ai:escalation", "awaiting_direction", "A/B/C", "interaction_comments"):
+        for value in ("openfde-ai:escalation", "awaiting_direction", "A/B/C", "interaction_comments", "耗时预算"):
             self.assertIn(value, content, value)
 
     def test_reply_sync_handles_direction_regression_and_confirmation(self):

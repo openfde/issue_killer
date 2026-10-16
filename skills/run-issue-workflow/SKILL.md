@@ -51,6 +51,8 @@ C. 暂停本轮
 
 **人机闭环**：分析受阻（连续排查无高置信结论、证据矛盾、模型自评估无法继续）时调用 `escalate-issue` 生成带 A/B/C 的求助评论（按 `publication.interaction_comments` 可自动发布）并停在 `awaiting_direction`；开发人员的回复（选项、方向或自由文本）由 `sync-github-replies` 轮询读取，写入 `analysis/direction.json` 后带着该方向继续（`direction_received`）。交付修复后进入 `awaiting_verification`（评论含“验证征询”段落）：回复“验证通过”→ `confirmed_fixed` → `archive-case`；回复“仍有问题（附新日志/截图）”→ 归档旧 revision、`revision+1`、从 `issue_fetched` 重新分析。issue 关闭始终由人工完成。
 
+**耗时预算（求助触发）**：同一目标（定位组件、根因或某个符号）连续探索约 **10 分钟**、或多次检索仍无进展时，必须停下调用 `escalate-issue`：列出已掌握线索、已排除项与候选方向（A/B/C），请开发人员指方向；不得无限期硬耗。外部/搜索命令一律带 `timeout`（建议 ≤300 秒）与结果上限。
+
 构建通道只允许通过 profile `build.helper` 声明的授权助手执行：`manual`（默认）只写 `build/build-request.json` 并停在 `build_requested`，等待人工运行助手；`auto` 才可调用助手。助手在受控构建树内临时应用 patch，构建后必须回滚，不得手工修改源码、应用 diff 或运行构建命令。`build_requested` 期间不得重复构建；`build_failed` 时记录失败并停止，交由人工处理。
 
 组件归属低置信或存在并列候选时，`resolve-manifest-components` 停在 `component_review_requested` 并写 `analysis/component-review.json`；必须由开发人员给出结论，再由 `confirm-component-mapping` 写入最终映射并沉淀到组件映射知识，然后继续。评审前不得自行猜测归属或重复检索。
