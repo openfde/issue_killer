@@ -28,7 +28,18 @@ while :; do
         if [ "${current:-0}" -gt "${seen:-0}" ] 2>/dev/null; then
             echo "[$(date -u +%FT%TZ)] issue=$issue state=$state new_comments=$((current-seen))" >> "$LOG"
             timeout 1200 pi --no-session --skill "$PWD/skills/sync-github-replies" \
-                -p "同步问题 #$issue 的新回复（当前状态 $state），按技能规则继续。" >> "$LOG" 2>&1
+                -p "同步问题 #$issue 的新回复（当前状态 $state），按技能规则处理。" >> "$LOG" 2>&1
+            new_state="$(python3 -c "import json;print(json.load(open('$st')).get('state',''))" 2>/dev/null)"
+            case "$new_state" in
+                awaiting_direction|awaiting_verification) : ;;
+                *)
+                    if [ -n "$new_state" ] && [ "$new_state" != "$state" ]; then
+                        echo "[$(date -u +%FT%TZ)] issue=$issue state=$state -> $new_state，续跑工作流" >> "$LOG"
+                        timeout 3600 pi --no-session --skill "$PWD/skills/run-issue-workflow" \
+                            -p "继续处理问题 #$issue（当前 state=$new_state；开发人员回复已同步）。非交互运行：连续执行机械步骤直到下一个等待态或终态为止；关键节点照常汇报，交互评论按策略发布。" >> "$LOG" 2>&1
+                    fi
+                    ;;
+            esac
         fi
     done
     sleep "$INTERVAL"
