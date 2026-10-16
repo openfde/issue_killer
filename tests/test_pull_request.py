@@ -36,6 +36,13 @@ class PullRequestTests(unittest.TestCase):
         pull_request = (ROOT / "skills/create-fix-pull-request/SKILL.md").read_text(encoding="utf-8")
         self.assertIn("由 AI 修复助手生成", pull_request)
 
+    def test_pr_updates_must_be_surfaced_to_the_issue(self):
+        skill = (ROOT / "skills/create-fix-pull-request/SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("必须立即继续", skill)
+
+        workflow = (ROOT / "skills/run-issue-workflow/SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("必须立即发布到 issue", workflow)
+
     def test_comment_draft_references_pull_request_when_present(self):
         content = (ROOT / "skills/draft-issue-comment/SKILL.md").read_text(encoding="utf-8")
         self.assertIn("pull-request.json", content)

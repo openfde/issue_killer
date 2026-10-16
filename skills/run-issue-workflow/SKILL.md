@@ -9,7 +9,7 @@ description: 当交互用户希望通过原子 skill 启动、恢复或检查一
 
 选择检查通过后，先初始化唯一目录 `.fde-ai/issues/<issue号>/` 及其 `input/`、`evidence/`、`analysis/`、`solution/`、`patch/`、`build/`、`comment/`、`archive/` 子目录，并在根目录**先写入** `state.json`：唯一状态字段名为 `state`，初始值为 `initialized`，同时记录 issue 编号、revision、profile SHA-256 与更新时间。不得使用 `status` 代替 `state`。然后加载项目配置、构建项目上下文、检查 `state.json`，恰好调用一个有效的原子 skill。该 skill 完成后重新读取并校验产物/状态；仅在调用方要求继续处理时重复。服务器协调器会对同一受信任 issue 自动发起后续调用，直到终态。任何后续技能都只可处理已明确选择的同一编号。唯一 patch 入口是 `.fde-ai/issues/<issue号>/patch/0001-<名称>.patch`；不得在 `.fde-ai/runs/` 创建新产物。
 
-允许的顺序为 `load-project-profile` → `build-project-context` → `fetch-github-issue` → 一个证据分支 → `resolve-manifest-components`（低置信时经 `confirm-component-mapping` 人工确认）→ `cache-provenanced-sources` → `retrieve-knowledge` → `trace-evidence-to-source` → `verify-analysis` → `propose-fix` → 可选的 `draft-patch` / `validate-patch-artifact` → 可选 `create-fix-pull-request`（人工确认；只创建 PR、不合入主分支）→ 配置了 `build` 时 `request-build` → `collect-build-artifacts` → `draft-issue-comment` → `publish-policy-comment`（交互评论按策略可自动发布）→ `awaiting_verification` →（回复轮询）→ `confirmed_fixed` → `archive-case`。任意阶段受阻时可先走 `escalate-issue`。
+允许的顺序为 `load-project-profile` → `build-project-context` → `fetch-github-issue` → 一个证据分支 → `resolve-manifest-components`（低置信时经 `confirm-component-mapping` 人工确认）→ `cache-provenanced-sources` → `retrieve-knowledge` → `trace-evidence-to-source` → `verify-analysis` → `propose-fix` → 可选的 `draft-patch` / `validate-patch-artifact` → 可选 `create-fix-pull-request`（人工确认；只创建/更新 PR、不合入主分支）→ `draft-issue-comment` → `publish-policy-comment`（**交付/验证征询评论必须立即发布到 issue**，不得因等待构建而延迟）→ 配置了 `build` 时 `request-build` → `collect-build-artifacts`（构建结果后到时追加一条简短更新评论）→ `awaiting_verification` →（回复轮询）→ `confirmed_fixed` → `archive-case`。任意阶段受阻时可先走 `escalate-issue`。
 
 **汇报与交互规范（人工交互模式）**：不逐步汇报所有原子步骤——加载配置、构建上下文、拉取 issue、证据提取、知识检索、引用校验等机械步骤内部连续执行，最多一句话带过（服务器队列模式仍按其提示词每次只推进一个原子步骤）。源码检索**一律使用 `rg`** 并限制范围与上限（`timeout`/`head`），禁止 `grep -r` 全树遍历。只在以下**关键节点**停下汇报，并给出 A/B/C 选项等待选择：
 
@@ -54,6 +54,8 @@ C. 暂停本轮
 **继续命令（交互会话，优先使用）**：在会话中说“继续 <编号>”时——先重读 `state.json`；若处于 `awaiting_direction`/`awaiting_verification`，先执行一次 `sync-github-replies` 检查 issue 新回复并据此更新状态；若开发人员在会话中直接给出选择/方向，则将其写入 `analysis/direction.json`（来源标注 `session`）后继续。然后按最新状态继续；该命令对**任意中间状态**都适用（包括无人值守停下的 `patch_validated` 等）。关键节点的 A/B/C **直接在本会话内询问并等待**，不在 issue 发交互评论（issue 评论仅用于无人值守的 PR 交付场景）。
 
 **无人值守运行的收尾规则**：非交互运行（无会话）中遇到任何需要人工选择的节点——求助、补丁完成后的下一步、验证征询等——**必须停在受监控的等待态**（`awaiting_direction`/`awaiting_verification`），不得只把问题写进日志后停在无监控的中间态（如 `patch_validated`），否则无人能接手。发布规则：默认 `pr_only`——**只有包含 PR 的交付/验证征询评论会发布到 issue**，其他决策不发布、等待开发者回到会话用“继续 <编号>”接管；`auto` 时求助评论（A/B/C）也发布；`manual` 时任何交互评论都不发布。日志只作为审计记录。
+
+**PR 与 issue 的同步规则（硬性）**：`create-fix-pull-request` 创建或更新 PR 后，编排**必须立即执行 `draft-issue-comment` → `publish-policy-comment`**，把该 revision 的交付/验证征询评论发布到 issue（`pr_only` 下这是唯一必发的过程评论）；不得因等待构建、等待人工或其他步骤而延迟。更新已有 PR 时，评论中注明更新后的分支/提交。构建结果若后到，追加一条简短更新评论。
 
 **人机闭环**：分析受阻（连续排查无高置信结论、证据矛盾、模型自评估无法继续）时调用 `escalate-issue` 生成带 A/B/C 的求助评论（按 `publication.interaction_comments` 可自动发布）并停在 `awaiting_direction`；开发人员的回复（选项、方向或自由文本）由 `sync-github-replies` 轮询读取，写入 `analysis/direction.json` 后带着该方向继续（`direction_received`）。交付修复后进入 `awaiting_verification`（评论含“验证征询”段落）：回复“验证通过”→ `confirmed_fixed` → `archive-case`；回复“仍有问题（附新日志/截图）”→ 归档旧 revision、`revision+1`、从 `issue_fetched` 重新分析。issue 关闭始终由人工完成。
 
