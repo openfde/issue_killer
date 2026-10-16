@@ -57,14 +57,14 @@ load-project-profile
 → verify-analysis
 → propose-fix
 → 可选 draft-patch / validate-patch-artifact
-→ 可选 create-fix-pull-request（人工确认；只创建 PR，不合入；跨多个项目时按项目分别创建）
-→ 配置了 build 时 request-build（manual 等待人工 / auto 经授权助手）
-→ collect-build-artifacts
-→ draft-issue-comment
-→ publish-policy-comment（交互评论按策略可自动发布）
+→ 可选 create-fix-pull-request（人工确认；只创建/更新 PR，不合入）
+→ draft-issue-comment → publish-policy-comment（交付/验证征询评论必须立即发布到 issue）
+→ 仅当 build.enabled=true 时 request-build → collect-build-artifacts（构建结果后到时追加更新评论）
 → awaiting_verification（等待人工自测；sync-github-replies 轮询回复）
 → confirmed_fixed → archive-case
 ```
+
+构建通道**默认关闭**（`build.enabled=false`，调试 L0-L2 期间不进入）。
 
 分析受阻或耗时超预算（同一目标约 10 分钟无进展）时，`escalate-issue` 发布带 A/B/C 的求助评论并停在 `awaiting_direction`；开发人员的回复由 `sync-github-replies` 按内容宽容解析：选项/方向 → 带方向继续（`direction_received`）；仍有问题+证据 → 新 revision 重新分析；验证通过 → `confirmed_fixed` 收敛归档。issue 关闭始终由人工完成。
 
@@ -76,7 +76,7 @@ load-project-profile
 
 `sources.mode=local_tree` 时，`cache-provenanced-sources` 在只读本地树中按组件记录精确 commit 与哈希，不克隆、不拉取；其他模式仅获取匹配组件的精确版本，并保持本地副本只读。
 
-补丁建议必须关联已验证的证据、组件、文件、行号和基准提交，且标记为 `not_run`。安装、启动和设备侧测试由用户或 CI 执行；其结果可作为下一版本的证据。补丁经人工在关键节点确认后，可由 `create-fix-pull-request` 在独立工作区应用、推送 `ai/` 分支并以 MR/PR 形式提交（**只创建、不合入主分支**），供开发人员查看、修改与合入；修复跨多个项目时按项目分别创建 PR，并由评论的“修复 PR/MR”段落附上全部链接。PR 说明与评论落款统一使用“由 AI 修复助手生成”，且不得写出内部产物路径。构建通道是补丁的受限验证手段而非修复声明：`manual`（默认）下 `request-build` 只写 `build/build-request.json` 并停在 `build_requested`，人工运行 `deploy/server/fde-ai-build.sh --issue <编号>`；`auto` 下由授权助手执行。助手加锁（`data/build.lock` 与 `.siso_lock` 检查）、临时应用 patch、模块增量构建、记录产物哈希到 `build/build-result.json`，并在任何退出路径回滚补丁；`collect-build-artifacts` 校验后推进到 `artifacts_collected`。
+补丁建议必须关联已验证的证据、组件、文件、行号和基准提交，且标记为 `not_run`。安装、启动和设备侧测试由用户或 CI 执行；其结果可作为下一版本的证据。补丁经人工在关键节点确认后，可由 `create-fix-pull-request` 在独立工作区应用、推送 `ai/` 分支并以 MR/PR 形式提交（**只创建、不合入主分支**），供开发人员查看、修改与合入；修复跨多个项目时按项目分别创建 PR，并由评论的“修复 PR/MR”段落附上全部链接；**创建或更新后必须立即发布交付/验证征询评论到 issue**。PR 说明与评论落款统一使用“由 AI 修复助手生成”，且不得写出内部产物路径。构建通道默认关闭（`build.enabled=false`）；启用后是补丁的受限验证手段而非修复声明：`manual`（默认）下 `request-build` 只写 `build/build-request.json` 并停在 `build_requested`，人工运行 `deploy/server/fde-ai-build.sh --issue <编号>`；`auto` 下由授权助手执行。助手加锁（`data/build.lock` 与 `.siso_lock` 检查）、临时应用 patch、模块增量构建、记录产物哈希到 `build/build-result.json`，并在任何退出路径回滚补丁；`collect-build-artifacts` 校验后推进到 `artifacts_collected`。
 
 ## GitHub 读取与发布
 

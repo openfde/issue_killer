@@ -24,6 +24,7 @@ class ArtifactLayoutTests(unittest.TestCase):
         self.assertEqual(profile["sources"]["mode"], "local_tree")
         self.assertTrue(profile["sources"]["read_only"])
         build = profile["build"]
+        self.assertFalse(build["enabled"])
         self.assertEqual(build["mode"], "manual")
         self.assertEqual(build["helper"], "deploy/server/fde-ai-build.sh")
         self.assertEqual(build["tree"], "fde-build")

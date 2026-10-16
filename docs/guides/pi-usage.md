@@ -163,7 +163,7 @@ python3 automation/openfde_ai_server.py \
 
 ## 受控构建（可选）
 
-`validate-patch-artifact` 通过后，如果 profile 配置了 `build`，工作流进入构建通道。默认 `build.mode=manual`：
+`validate-patch-artifact` 通过后，**仅当 profile 配置了 `build` 且 `build.enabled=true`** 才进入构建通道（**默认关闭**，调试 L0-L2 期间不进入；停在 `build_requested` 的历史状态在关闭时视为已跳过）。启用后默认 `build.mode=manual`：
 
 1. `request-build` 只写 `.fde-ai/issues/<issue号>/build/build-request.json`，把 `state` 推进到 `build_requested` 后停止；
 2. 人工在部署容器内运行授权助手：

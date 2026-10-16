@@ -5,7 +5,7 @@ description: 当已校验的 patch 建议需要按项目构建配置请求一次
 
 # 请求受限构建
 
-仅接收 `patch_validated`。只读取 profile 的 `build` 配置和唯一补丁入口 `.fde-ai/issues/<issue号>/patch/0001-<名称>.patch` 及其 `patch.json`；不得手工修改源码、手工应用 diff 或手工运行构建命令。不得在 `.fde-ai/runs/` 创建新产物。
+仅接收 `patch_validated`，且**仅当 profile `build.enabled=true` 时使用**（构建通道默认关闭；L0-L2 调试期间不得进入）。只读取 profile 的 `build` 配置和唯一补丁入口 `.fde-ai/issues/<issue号>/patch/0001-<名称>.patch` 及其 `patch.json`；不得手工修改源码、手工应用 diff 或手工运行构建命令。不得在 `.fde-ai/runs/` 创建新产物。
 
 先写 `.fde-ai/issues/<issue号>/build/build-request.json`：issue 编号、revision、patch 路径与 SHA-256、base commit、`target`、`modules`、构建树与输出目录逻辑路径、`artifacts` 列表、助手命令和触发模式。随后按 `build.mode` 分支：
 

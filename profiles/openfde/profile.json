@@ -17,6 +17,7 @@
     "read_only": true
   },
   "build": {
+    "enabled": false,
     "mode": "manual",
     "helper": "deploy/server/fde-ai-build.sh",
     "tree": "fde-build",
