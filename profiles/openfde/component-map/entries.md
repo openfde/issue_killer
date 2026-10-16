@@ -6,6 +6,7 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | path | device/openfde/fde | device_fde | device/openfde/fde | high | seed-manifest | 2026-10-12 | FDE 设备树与产品配置 |
 | path | hardware/openfde | hardware_openfde | hardware/openfde | high | seed-manifest | 2026-10-12 | FDE 硬件抽象实现 |
+| keyword | 应用列表,应用抽屉,全部应用,AllApps,launcher,app drawer | packages_apps_launcher3 | packages/apps/Launcher3 | high | seed | 2026-10-16 | FDE 桌面应用列表/应用抽屉（宿主进程 com.android.launcher3；插件窗口见 TaskPlugin 条目） |
 | keyword | 桌面,窗口,任务栏,任务,desktop,taskbar,window | boringdroidsystemui | packages/apps/BoringdroidSystemUI | medium | seed | 2026-10-12 | FDE 桌面系统 UI（任务栏/窗口装饰） |
 | keyword | 任务管理,任务切换,TaskManager | packages_apps_TaskManager | packages/apps/TaskManager | high | seed | 2026-10-12 | 桌面任务管理组件 |
 | keyword | TaskPlugin | packages_apps_TaskPlugin | packages/apps/TaskPlugin | high | seed | 2026-10-12 | 桌面任务插件 |
