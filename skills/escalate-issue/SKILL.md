@@ -23,6 +23,6 @@ description: 当分析受阻或需要开发人员指方向时，生成并（按�
 - **A/B/C 选项**：给出 2~3 个最可能的下一步（例如 `A. 确认问题属于 XX 模块  B. 请提供 XX（含具体命令/路径）  C. 换方向：优先检查 YY`）；开发人员可自由文本回复，不必局限于选项；
 - 稳定 marker：`<!-- openfde-ai:escalation issue=<编号> revision=<版本> -->`，并注明“由 AI 修复助手生成、未验证”。
 
-发布：按 profile `publication.interaction_comments`——`auto` 且通过 `publish-policy-comment` 的去重/脱敏/认证门槛时直接 `gh issue comment` 发布；`manual` 时只保留草稿并提示人工发布。发布完成后把 `state.json` 的 `state` 推进到 `awaiting_direction` 并停止。
+发布：仅在**无人值守运行**且 profile `publication.interaction_comments=auto` 时，经发布门槛检查后 `gh issue comment` 发布求助评论并把 `state` 推进到 `awaiting_direction`；`pr_only`（默认）或 `manual` 时**不发布**，直接把 `state` 推进到 `awaiting_direction` 后停止，等待开发人员在交互会话中用“继续 <编号>”接管。交互会话中受阻则只在会话里给出 A/B/C，不改等待态、不发评论。
 
 回复由 `sync-github-replies` 轮询读取后继续分析；不得在 `.fde-ai/runs/` 创建新产物。

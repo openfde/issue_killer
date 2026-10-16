@@ -20,7 +20,7 @@ description: 当已校验的补丁建议需要以分支+PR 形式提交到 GitHu
 2. 生成该项目补丁片段：单项目即规范 patch 本身，多项目时从规范 patch 中拆分出仅属于该项目的文件/hunk；片段只作工作区中间文件。先 `git apply --check <片段>`（失败即停止），再应用；用 `git status --porcelain` 核对仅片段涉及文件变更，偏差即停止。
 3. 提交（作者标注为助手）：`git -c user.name="pi-agent" -c user.email="pi-agent@openfde.local" commit -m "fix: <issue 标题> (openfde/openfde#<编号>)" -m "由 AI 修复助手生成的修复建议：未构建、未测试（not_run）；关联问题 openfde/openfde#<编号>。"`。
 4. 推送分支：`git push origin HEAD:refs/heads/<分支>`。
-5. 创建 PR（gh 已登录）：`gh pr create --repo openfde/<项目名> --base <base> --head <分支> --title "fix: <标题> (#<编号>)" --body-file <说明文件>`；说明文件由 `solution/solution.md` 摘要生成，开头与结尾均须注明“由 AI 修复助手生成、未构建未测试（not_run）、未合入”，结尾固定为 `*由 AI 修复助手生成、未构建未测试（not_run）、未合入；内容仅供参考。*`；**PR 说明不得写出 `.fde-ai/`、`data/` 等内部产物路径，不得出现“分析产物”字样**。从输出捕获 PR 链接；推送或创建失败时报告已处理项目的分支状态与页面链接，并停止剩余项目。
+5. 创建 PR（gh 已登录）：`gh pr create --repo openfde/<项目名> --base <base> --head <分支> --title "fix: <标题> (#<编号>)" --body-file <说明文件>`；说明文件由 `solution/solution.md` 摘要生成，开头与结尾均须注明“由 AI 修复助手生成、未构建未测试（not_run）、未合入”，结尾固定为 `*由 AI 修复助手生成、未构建未测试（not_run）、未合入；内容仅供参考。*`；**PR 说明不得写出 `.fde-ai/`、`data/` 等内部产物路径，不得出现“分析产物”字样**；若补丁新增调试日志，列出新增 TAG 与复测用 `adb logcat -s <TAG>` 过滤命令。从输出捕获 PR 链接；推送或创建失败时报告已处理项目的分支状态与页面链接，并停止剩余项目。
 6. 全部项目完成后记录 `patch/pull-request.json`：`pull_requests` 数组，每项含 provider、repo、base、branch、commit、url、created_at、`merged: false` 与该项目补丁片段引用；单项目时数组也恰好一项。`state.json` 增加 `pull_request` 引用（单项目为对象、多项目为数组），把 `state` 推进到 `pull_request_created`。
 7. 关键节点汇报：**逐行列出全部 PR 链接（项目 → 链接、分支、base）**；单项目只给一个链接。附各项目 diff 摘要（`git show --stat`）与未验证声明，并明确“只创建、未合入”。
 

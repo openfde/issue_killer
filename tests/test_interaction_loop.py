@@ -10,14 +10,23 @@ class InteractionLoopTests(unittest.TestCase):
     def test_profile_enables_interaction_comments_and_reply_polling(self):
         profile = json.loads((ROOT / "profiles/openfde/profile.json").read_text(encoding="utf-8"))
 
-        self.assertEqual(profile["publication"]["interaction_comments"], "auto")
+        self.assertEqual(profile["publication"]["interaction_comments"], "pr_only")
         self.assertEqual(profile["replies"]["poll_seconds"], 180)
 
     def test_escalation_skill_publishes_options_and_waits(self):
         content = (ROOT / "skills/escalate-issue/SKILL.md").read_text(encoding="utf-8")
 
-        for value in ("openfde-ai:escalation", "awaiting_direction", "A/B/C", "interaction_comments", "耗时预算"):
+        for value in ("openfde-ai:escalation", "awaiting_direction", "A/B/C", "pr_only", "耗时预算"):
             self.assertIn(value, content, value)
+
+    def test_patches_must_include_debug_logging(self):
+        propose = (ROOT / "skills/propose-fix/SKILL.md").read_text(encoding="utf-8")
+        for value in ("调试日志策略", "级别", "禁止逐帧/循环内高频打印"):
+            self.assertIn(value, propose, value)
+
+        draft = (ROOT / "skills/draft-patch/SKILL.md").read_text(encoding="utf-8")
+        for value in ("调试日志", "adb logcat -s"):
+            self.assertIn(value, draft, value)
 
     def test_reply_sync_handles_direction_regression_and_confirmation(self):
         content = (ROOT / "skills/sync-github-replies/SKILL.md").read_text(encoding="utf-8")

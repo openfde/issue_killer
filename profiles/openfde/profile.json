@@ -57,7 +57,7 @@
   "publication": {
     "mode": "manual_per_issue",
     "allow_auto_information_requests": true,
-    "interaction_comments": "auto",
+    "interaction_comments": "pr_only",
     "dry_run": true,
     "minimum_confidence": "high",
     "blocked_labels": ["no-ai-reply"]

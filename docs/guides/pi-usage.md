@@ -98,15 +98,27 @@ python3 automation/openfde_ai_server.py \
 
 ## 求助与验证闭环
 
-**两种交互方式（本地优先，减少 issue 评论噪音）**：
+**交互通道与占比（`publication.interaction_comments`）**：
 
-- **本机会话（推荐日常使用）**：关键节点与 A/B/C 都在终端里完成，不产生 issue 评论；任何时候用 `继续 <编号>` 一键接续——会先自动同步 issue 回复（如有），再按最新状态在本地交互；
-- **Issue 评论（无人值守/异地兜底）**：无人值守运行需要人工决策时会自动发布 A/B/C 交互评论并停在等待态，你在 issue 回复即可继续；
-- **噪音控制**：不想让无人值守回合刷评论时，把 `publication.interaction_comments` 设为 `manual`（默认 `auto`）——此时无人值守回合只停在等待态，你回到会话用 `继续 <编号>` 接管。
+| 模式 | 求助/选择（A/B/C） | 修复交付（含 PR） |
+| --- | --- | --- |
+| 交互会话（你在电脑前） | 终端内完成，不发评论 | 发布交付/验证征询评论 |
+| 无人值守 + `pr_only`（默认） | 不发评论，停在等待态 | 发布交付/验证征询评论 |
+| 无人值守 + `auto` | 发布 A/B/C 求助评论 | 发布交付/验证征询评论 |
+| 任意 + `manual` | 不发 | 仅留草稿 |
+
+**重新进入下一轮（推荐用法）**：在 pi 会话里直接说：
+
+```text
+继续 494
+继续 494；选 A（更新 PR），PAGE_TURN_DISTANCE 用 60
+```
+
+它会先重读状态、自动同步 issue 新回复（如有），然后在**本地**继续分析修复；对任意中间状态都适用（包括无人值守停下的 `patch_validated`）。关键节点与 A/B/C 都在终端里完成，不产生 issue 评论。
 
 其余行为：
-- 分析受阻时（或按耗时预算触发），助手会生成带 **A/B/C 选项**的求助（交互会话内直接问；无人值守时发布评论），并停 `awaiting_direction`；
-- 交付修复（评论含“验证征询”）后停 `awaiting_verification`：回复 `验证通过` 收敛为 `confirmed_fixed` 并归档；回复 `仍有问题`（附新日志/截图）会开启新 revision 重新分析；
+- 分析受阻（或按耗时预算触发）时停 `awaiting_direction`；交互会话内直接问，无人值守且 `auto` 时才发布求助评论；
+- 交付修复后停 `awaiting_verification`：回复 `验证通过` 收敛为 `confirmed_fixed` 并归档；回复 `仍有问题`（附新日志/截图）开启新 revision 重新分析；
 - 轮询：`deploy/reply-poll.sh` 默认每 3 分钟检查一次新回复（`REPLY_POLL_SECONDS` 或 profile `replies.poll_seconds` 可调整）；无新回复时不消耗模型调用。
 
 ## 浏览与分析一个问题

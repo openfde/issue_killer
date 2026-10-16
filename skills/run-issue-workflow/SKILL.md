@@ -51,9 +51,9 @@ C. 暂停本轮
 
 **会话恢复规则**：任何会话（含被轮询/服务器唤醒的无人值守运行）继续处理时，必须先重读 `.fde-ai/issues/<issue号>/state.json` 与最新产物，从**当前实际状态**继续；不得依赖旧会话上下文，也不得因上下文与文件不一致而停止。
 
-**继续命令（交互会话，优先使用）**：在会话中说“继续 <编号>”时——先重读 `state.json`；若处于 `awaiting_direction`/`awaiting_verification`，先执行一次 `sync-github-replies` 检查 issue 新回复并据此更新状态；若开发人员在会话中直接给出选择/方向，则将其写入 `analysis/direction.json`（来源标注 `session`）后继续。然后按最新状态继续。关键节点的 A/B/C **直接在本会话内询问并等待**，不在 issue 发交互评论（issue 评论仅用于无人值守场景）。
+**继续命令（交互会话，优先使用）**：在会话中说“继续 <编号>”时——先重读 `state.json`；若处于 `awaiting_direction`/`awaiting_verification`，先执行一次 `sync-github-replies` 检查 issue 新回复并据此更新状态；若开发人员在会话中直接给出选择/方向，则将其写入 `analysis/direction.json`（来源标注 `session`）后继续。然后按最新状态继续；该命令对**任意中间状态**都适用（包括无人值守停下的 `patch_validated` 等）。关键节点的 A/B/C **直接在本会话内询问并等待**，不在 issue 发交互评论（issue 评论仅用于无人值守的 PR 交付场景）。
 
-**无人值守运行的收尾规则**：非交互运行（无会话）中遇到任何需要人工选择的节点——求助、补丁完成后的下一步、验证征询等——**必须通过 issue 交互评论（A/B/C）提出并停在对应的等待态**（`awaiting_direction`/`awaiting_verification`）；不得只把问题写进日志后停在无监控的中间态（如 `patch_validated`），否则无人能接手。日志只作为审计记录。若 profile `publication.interaction_comments=manual`，则无人值守运行只停在等待态、不发布评论，由开发者回到会话用“继续 <编号>”接管。
+**无人值守运行的收尾规则**：非交互运行（无会话）中遇到任何需要人工选择的节点——求助、补丁完成后的下一步、验证征询等——**必须停在受监控的等待态**（`awaiting_direction`/`awaiting_verification`），不得只把问题写进日志后停在无监控的中间态（如 `patch_validated`），否则无人能接手。发布规则：默认 `pr_only`——**只有包含 PR 的交付/验证征询评论会发布到 issue**，其他决策不发布、等待开发者回到会话用“继续 <编号>”接管；`auto` 时求助评论（A/B/C）也发布；`manual` 时任何交互评论都不发布。日志只作为审计记录。
 
 **人机闭环**：分析受阻（连续排查无高置信结论、证据矛盾、模型自评估无法继续）时调用 `escalate-issue` 生成带 A/B/C 的求助评论（按 `publication.interaction_comments` 可自动发布）并停在 `awaiting_direction`；开发人员的回复（选项、方向或自由文本）由 `sync-github-replies` 轮询读取，写入 `analysis/direction.json` 后带着该方向继续（`direction_received`）。交付修复后进入 `awaiting_verification`（评论含“验证征询”段落）：回复“验证通过”→ `confirmed_fixed` → `archive-case`；回复“仍有问题（附新日志/截图）”→ 归档旧 revision、`revision+1`、从 `issue_fetched` 重新分析。issue 关闭始终由人工完成。
 
