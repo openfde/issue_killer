@@ -19,13 +19,13 @@ class InteractionLoopTests(unittest.TestCase):
         for value in ("openfde-ai:escalation", "awaiting_direction", "A/B/C", "pr_only", "耗时预算"):
             self.assertIn(value, content, value)
 
-    def test_patches_must_include_debug_logging(self):
+    def test_debug_logging_is_added_only_when_needed(self):
         propose = (ROOT / "skills/propose-fix/SKILL.md").read_text(encoding="utf-8")
-        for value in ("调试日志策略", "级别", "禁止逐帧/循环内高频打印"):
+        for value in ("调试日志策略（按需）", "把握不足", "禁止逐帧/循环内高频打印", "高置信度的最小修复不需要额外日志"):
             self.assertIn(value, propose, value)
 
         draft = (ROOT / "skills/draft-patch/SKILL.md").read_text(encoding="utf-8")
-        for value in ("调试日志", "adb logcat -s"):
+        for value in ("调试日志", "adb logcat -s", "高置信度的最小修复无需额外日志"):
             self.assertIn(value, draft, value)
 
     def test_reply_sync_handles_direction_regression_and_confirmation(self):
