@@ -140,7 +140,7 @@ cd ..
 
 源码树必须保持只读。工作流会在 `analysis/sources.json` 记录每个组件的精确 commit 与哈希。
 
-Docker 一键部署时无需手工准备：首次启动的 `sources-sync` 会按 `FDE_SOURCE_MODULES`（默认 `art build device external frameworks hardware openfde-sdk packages prebuilts system`）执行 `repo init/sync`；如果 `fde-sources/` 已有内容且没有 `.repo`，会被视为外部准备好的树并原样复用。
+Docker 一键部署时无需手工准备：首次启动的 `sources-sync` 默认按 `github-sources.tsv` 同步 GitHub 镜像（48 个仓库，分支 `fde_17`），并按 `FDE_SOURCE_MODULES`（默认 `art build device external frameworks hardware openfde-sdk packages prebuilts system`）过滤模块；已有仓库会被复用。若内部 GitLab 可达，可设 `FDE_SYNC_MODE=repo` 改用 `repo init/sync`。
 
 ### 3.4 构建树：fde-build（可选）
 
@@ -429,7 +429,7 @@ FORCE_SYNC=1 ./deploy/docker/up.sh    # 模块列表变化后重新同步
 docker compose down                   # 不要用 down -v
 ```
 
-- `sources-sync`（一次性）：首次按 `FDE_SOURCE_MODULES`（默认 `art build device external frameworks hardware openfde-sdk packages prebuilts system`）执行 `repo init/sync`；已有且无 `.repo` 的源码树会被原样复用。
+- `sources-sync`（一次性）：默认按 GitHub 镜像（48 个仓库，`fde_17`）同步，并按 `FDE_SOURCE_MODULES`（默认 `art build device external frameworks hardware openfde-sdk packages prebuilts system`）过滤；已有仓库复用。`FDE_SYNC_MODE=repo` 改用 Android `repo init/sync`，`none` 跳过（使用已准备好的树）。
 - `scanner`：定时扫描 + worker；`poller`：5 分钟回复轮询；`shell`：交互式 Pi（profile `tools`）。
 - `sources-sync` 以 root 写入源码并 `chmod -R a+rX`；`scanner`/`poller`/`shell` 以镜像内 `agent`（UID 1000）只读访问源码。
 - 队列/工件在命名卷 `openfde_ai_state`/`openfde_ai_data`；源码与清单是 bind mount。
@@ -613,16 +613,16 @@ tail -f data/logs/reply-poll.log
 
 **Docker 首次启动长时间停在 `sources-sync`**
 
-首次需要按模块子集 `repo sync`（默认 10 个模块），耗时取决于网络与磁盘：
+首次需要同步源码模块（默认 GitHub 镜像 48 个仓库），耗时取决于网络与磁盘：
 
 ```sh
 docker compose logs -f sources-sync
 # 调整镜像/分支/模块
-FDE_MANIFEST_URL=... FDE_MANIFEST_BRANCH=... FDE_SOURCE_MODULES="..." ./deploy/docker/up.sh
+FDE_SYNC_MODE=repo FDE_MANIFEST_URL=... FDE_SOURCE_MODULES="..." ./deploy/docker/up.sh
 FORCE_SYNC=1 ./deploy/docker/up.sh     # 忽略已有 marker，强制重同步
 ```
 
-已有源码树（非空且无 `.repo`）会被原样复用，不会覆盖。
+已有源码（每个项目保留 `.git`）会被复用；`FDE_SYNC_MODE=none` 可完全跳过同步。
 
 **Docker 内交互 Pi**
 

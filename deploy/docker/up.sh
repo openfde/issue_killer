@@ -30,7 +30,7 @@ fi
 command -v docker >/dev/null 2>&1 || { echo "未找到 docker" >&2; exit 2; }
 docker compose version >/dev/null 2>&1 || { echo "未找到 docker compose v2" >&2; exit 2; }
 
-MANIFEST_URL="${FDE_MANIFEST_URL:-https://src.ift.run/openfde17/fde-manifests}"
+MANIFEST_URL="${FDE_MANIFEST_URL:-https://github.com/openfde/fde-manifests.git}"
 MANIFEST_BRANCH="${FDE_MANIFEST_BRANCH:-fde_17}"
 
 if [ ! -f "$ROOT/config/openfde-ai-server.json" ]; then

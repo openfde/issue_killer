@@ -2,7 +2,7 @@
 
 根目录 [README](../../README.md) 是完整入口。本页只补充容器部署细节。
 
-适用：Linux 服务器 + Docker Compose v2；不需要 AOSP 构建工具链，只需要 `fde-manifests` 与 `fde-sources`（首次可自动同步模块子集）。
+适用：Linux 服务器 + Docker Compose v2；不需要 AOSP 构建工具链，只需要 `fde-manifests` 与 `fde-sources`（首次默认从 GitHub 镜像同步模块子集）。
 
 ## 前置
 
@@ -21,7 +21,7 @@ cp deploy/server/env.example .env
 
 脚本会：检查 Docker/Compose 与凭据 → 生成 `config/openfde-ai-server.json` → 缺失时克隆 `fde-manifests` → 构建镜像 → 启动 `sources-sync`、`scanner`、`poller`。
 
-首次启动时 `sources-sync` 会按 `FDE_SOURCE_MODULES`（默认 `art build device external frameworks hardware openfde-sdk packages prebuilts system`）执行 `repo init/sync`；`scanner`/`poller` 会等它完成后才启动。
+首次启动时 `sources-sync` 默认按 `deploy/docker/github-sources.tsv` 同步 GitHub 镜像（48 个仓库，分支 `fde_17`），并按 `FDE_SOURCE_MODULES`（默认 `art build device external frameworks hardware openfde-sdk packages prebuilts system`）过滤模块；`scanner`/`poller` 会等它完成后才启动。
 
 ```sh
 docker compose logs -f sources-sync
@@ -29,7 +29,7 @@ docker compose logs -f scanner poller
 docker compose ps
 ```
 
-已有源码树（非空且无 `.repo`）会被原样复用，不会覆盖。
+已有仓库会被复用；`FDE_SYNC_MODE=repo` 可改用 Android `repo init/sync`（内部 GitLab 可达时），`FDE_SYNC_MODE=none` 可完全跳过同步。
 
 ## 交互式 Pi
 
@@ -48,7 +48,7 @@ docker compose exec shell pi
 
 | 服务/卷 | 说明 |
 | --- | --- |
-| `sources-sync` | 一次性：初始化/更新源码子集；以 root 写入并 `chmod -R a+rX` |
+| `sources-sync` | 一次性：初始化/更新源码子集（默认 GitHub 镜像，可切换 repo 模式）；以 root 写入并 `chmod -R a+rX` |
 | `scanner` | 定时扫描 + worker，按 `SCAN_INTERVAL_SECONDS`（默认 1800）循环 |
 | `poller` | 回复轮询，`REPLY_POLL_SECONDS`（默认 300） |
 | `shell` | 交互式 Pi（profile `tools`） |
@@ -76,7 +76,7 @@ docker compose down
 
 ## 排障
 
-- `sources-sync` 失败：查看日志；检查 `FDE_MANIFEST_URL`/`FDE_MANIFEST_BRANCH` 网络可达性；可用 `FDE_SOURCE_MODULES` 缩小范围；
+- `sources-sync` 失败：查看日志；默认 GitHub 模式检查 GitHub 网络，repo 模式检查 `FDE_MANIFEST_URL`/`FDE_MANIFEST_BRANCH`；可用 `FDE_SOURCE_MODULES` 缩小范围，或 `FDE_SYNC_MODE=none` 使用已有源码；
 - 容器内 `gh` 未认证：确认 `.env` 的 `GH_TOKEN` 非空并重建容器；
 - 交互 Pi 仍是旧技能：退出 Pi 进程并重新 `docker compose exec`（新进程）；
 - 源码权限：确认 bind mount 目录对 UID 1000 可读，或重新运行 `sources-sync` 的 `chmod -R a+rX`。

@@ -15,8 +15,11 @@ services:
     user: "0:0"
     environment:
       HOME: /tmp
-      FDE_MANIFEST_URL: ${FDE_MANIFEST_URL:-https://src.ift.run/openfde17/fde-manifests}
+      FDE_SYNC_MODE: ${FDE_SYNC_MODE:-github}
+      FDE_MANIFEST_URL: ${FDE_MANIFEST_URL:-https://github.com/openfde/fde-manifests.git}
       FDE_MANIFEST_BRANCH: ${FDE_MANIFEST_BRANCH:-fde_17}
+      FDE_SOURCE_BRANCH: ${FDE_SOURCE_BRANCH:-fde_17}
+      FDE_SOURCE_MAP: ${FDE_SOURCE_MAP:-deploy/docker/github-sources.tsv}
       FDE_SOURCE_MODULES: ${FDE_SOURCE_MODULES:-art build device external frameworks hardware openfde-sdk packages prebuilts system}
       FDE_SYNC_JOBS: ${FDE_SYNC_JOBS:-8}
       FORCE_SYNC: ${FORCE_SYNC:-0}

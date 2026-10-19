@@ -10,7 +10,7 @@ ROOT = Path(__file__).parents[1]
 
 class DockerOneClickTests(unittest.TestCase):
     def test_one_click_assets_exist(self):
-        for name in ("up.sh", "sync-sources.sh", "select-sources.py"):
+        for name in ("up.sh", "sync-sources.sh", "select-sources.py", "github-sources.tsv"):
             self.assertTrue((ROOT / "deploy/docker" / name).is_file(), name)
 
     def test_up_script_checks_prerequisites_and_starts_compose(self):
@@ -40,8 +40,29 @@ class DockerOneClickTests(unittest.TestCase):
             ".fde-ai-sync.json",
             "FORCE_SYNC",
             "chmod -R a+rX",
+            "FDE_SYNC_MODE",
+            "github-sources.tsv",
+            "sync_one_github",
         ):
             self.assertIn(value, content, value)
+
+    def test_github_source_map_covers_the_current_tree(self):
+        rows = [
+            line.split("\t")
+            for line in (ROOT / "deploy/docker/github-sources.tsv").read_text(encoding="utf-8").splitlines()
+            if line.strip() and not line.startswith("#")
+        ]
+        self.assertEqual(len(rows), 48)
+        paths = {row[0] for row in rows}
+        for path in (
+            "frameworks/base",
+            "packages/apps/TaskPlugin",
+            "device/openfde/ftg340",
+            "openfde-sdk",
+        ):
+            self.assertIn(path, paths)
+        for row in rows:
+            self.assertTrue(row[1].startswith("https://github.com/openfde/"), row)
 
     def test_select_sources_filters_by_top_level_path(self):
         manifest = """<?xml version="1.0" encoding="UTF-8"?>
