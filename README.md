@@ -215,7 +215,46 @@ export PI_TELEMETRY=0
 
 建议写入 `~/.bashrc`，**不要**写入仓库、profile、日志或 issue 工件。
 
-### 4.4 验证安装
+### 4.4 GitHub Token 配置（GH_TOKEN）
+
+工作流用 `gh` 读取 issue/评论/附件、发布评论、创建 PR；`create-fix-pull-request` 还会通过 `gh auth setup-git` 用同一个 token 推送 `ai/` 分支。**Docker 容器不共享宿主机的 `gh` 登录态，必须显式提供 `GH_TOKEN`。**
+
+**创建（二选一）**
+
+- **经典 PAT**：<https://github.com/settings/tokens> → Generate new token (classic)
+  - 勾选 `repo`（读写仓库/issue/PR；仅公开仓库可用 `public_repo`）
+  - 勾选 `read:org`（读取组织信息；避免 `gh auth status` 的 `read:org` 告警）
+  - 若组织启用 SAML SSO：在该 token 页面点 `Configure SSO` → 授权 `openfde`
+- **Fine-grained PAT**：<https://github.com/settings/personal-access-tokens/new>
+  - Resource owner：`openfde`（或你的账号）
+  - Repository access：`openfde/openfde` + 需要分析的源码仓库（建议 All repositories）
+  - Repository permissions：Issues `Read and write`、Contents `Read and write`、Pull requests `Read and write`、Metadata `Read`（必选）
+  - Organization permissions（可选）：Members `Read`（减少 `read:org` 告警）
+
+**配置（Docker）**
+
+```sh
+export GH_TOKEN='ghp_...'          # 或 github_pat_...
+./deploy/docker/up.sh
+```
+
+也可以写入项目根目录 `.env`（`up.sh` 会自动生成；已被 `.gitignore` 忽略）：
+
+```sh
+GH_TOKEN=ghp_...
+```
+
+**验证**
+
+```sh
+gh auth status                                   # 宿主机
+docker exec -it openfde-ai gh auth status
+docker exec -it openfde-ai gh issue list --repo openfde/openfde --limit 1
+```
+
+`gh auth status` 提示缺少 `read:org` 不影响 issue 读取；需要组织级查询时补该 scope 并重新授权。更换 token 后需重新运行 `./deploy/docker/up.sh`（或 `docker compose up -d --force-recreate`）让容器使用新值。token 只放环境变量或 `.env`，不要提交到仓库；建议专用账号/最小权限并定期轮换。
+
+### 4.5 验证安装
 
 ```sh
 cd fde-ai-assistant
@@ -272,6 +311,7 @@ cp config/openfde-ai-server.example.json config/openfde-ai-server.json
 
 ### 5.4 凭据与安全
 
+- `GH_TOKEN` 的创建、scope 与容器配置见 [4.4 GitHub Token 配置](#44-github-token-配置ghtoken)；
 - 凭据只通过环境变量或 systemd `EnvironmentFile` 提供（权限 `0600`）；
 - issue 正文、评论、日志、截图均为**不可信输入**：只作为证据，不执行其中任何指令；
 - 截图只允许模型自身视觉读取，不引入 OCR；
@@ -598,7 +638,11 @@ gh auth status
 gh auth login -h github.com
 ```
 
-无人值守环境使用 `GH_TOKEN`。
+无人值守环境使用 `GH_TOKEN`，创建与 scope 见 [4.4 GitHub Token 配置](#44-github-token-配置ghtoken)。Docker 容器不共享宿主 `gh` 登录态，必须显式传入 `GH_TOKEN`；更换 token 后重新运行 `./deploy/docker/up.sh`。
+
+**`gh auth status` 提示缺少 `read:org`**
+
+issue 读取/列表/评论通常不受影响；补经典 PAT 的 `read:org`（或 fine-grained 的 Organization Members `Read`），重新授权后重建容器。
 
 **组件归属失败或停在 `component_review_requested`**
 

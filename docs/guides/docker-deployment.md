@@ -14,6 +14,8 @@ export DEEPSEEK_API_KEY='...'         # 默认模型
 # export PI_BASE_URL=https://...      # OpenAI 兼容网关
 ```
 
+`GH_TOKEN` 的创建与权限（经典 PAT `repo`+`read:org`，或 fine-grained Issues/Contents/PR 读写 + Metadata 读取）见 [README 4.4](../../README.md#44-github-token-配置ghtoken)。容器不共享宿主机 `gh` 登录态，必须显式传入；更换 token 后重新 `up.sh`。
+
 `up.sh` 首次运行会自动生成 `.env`；已 export 的变量优先，不会被 `.env` 覆盖。也可以直接编辑 `.env`。`.env` 已被 `.gitignore` 忽略。
 
 ## 一键启动

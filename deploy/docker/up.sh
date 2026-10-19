@@ -39,7 +39,7 @@ fi
 load_env
 
 if [ -z "${GH_TOKEN:-}" ]; then
-    echo "缺少 GH_TOKEN：请先 export GH_TOKEN=... 或写入 .env。" >&2
+    echo "缺少 GH_TOKEN：请先 export GH_TOKEN=... 或写入 .env（创建与权限见 README 4.4）。" >&2
     exit 2
 fi
 
