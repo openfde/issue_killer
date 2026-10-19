@@ -109,6 +109,16 @@ python3 automation/openfde_ai_server.py \
 
 方案仅供人工执行（全部 `not_run`），需要构建的插桩会提示开启 `build.enabled=true`。
 
+## 原因链与修复选项（无法立即修复的 issue）
+
+当问题无法立即修复（根因存在未证实环节、需要复现实验、多条可行修复路线或改动影响面需要开发决策）时，助手**不自行选路线**，而是产出并发布一条 `analysis-options` issue 回复：
+
+- **问题原因链**：触发条件与前置状态、毫秒级时间线、按时间/调用顺序的完整因果链（每步带证据 ID/日志时间戳与 `文件:行号`）、直接原因、根本原因、放大因素、容错路径为何失效、未证实环节（标注“推断，未证实”与验证实验）、影响面、已排除项；
+- **修复选项 A/B/C**：每项含改动点（`文件:函数`）、机制、优点、缺点与风险、验证方法与判据、工作量、是否需要构建/刷机；推荐项标注“推荐”；
+- **请求决策**：请开发人员回复 A/B/C；选择结果由轮询同步后，按所选路线继续生成补丁/PR。
+
+写作要求：纯技术分析，结论必有依据，禁止套话、情绪化文字与空泛总结。发布由 `publication.analysis_options_comment` 控制（当前 `auto`）；`dry_run=true` 时发布前仍需你在会话中确认。
+
 ## 求助与验证闭环
 
 **交互通道与占比（`publication.interaction_comments`）**：
@@ -120,6 +130,8 @@ python3 automation/openfde_ai_server.py \
 | 无人值守 + `auto` | 发布 A/B/C 求助评论 | 发布交付/验证征询评论 |
 | 任意 + `manual` | 不发 | 仅留草稿 |
 
+例外：`publication.analysis_options_comment=auto` 时，“无法立即修复”的原因链+修复选项征询评论（`analysis-options`）会发布到 issue 并停在 `awaiting_direction`（不受 `pr_only` 限制）；`dry_run=true` 时发布前仍需你在会话中确认。
+
 **重新进入下一轮（推荐用法）**：在 pi 会话里直接说：
 
 ```text
@@ -127,7 +139,7 @@ python3 automation/openfde_ai_server.py \
 继续 494；选 A（更新 PR），PAGE_TURN_DISTANCE 用 60
 ```
 
-它会先重读状态、自动同步 issue 新回复（如有），然后在**本地**继续分析修复；对任意中间状态都适用（包括无人值守停下的 `patch_validated`）。关键节点与 A/B/C 都在终端里完成，不产生 issue 评论。
+它会先重读状态、自动同步 issue 新回复（如有），然后在**本地**继续分析修复；对任意中间状态都适用（包括无人值守停下的 `patch_validated`）。关键节点与 A/B/C 默认在终端内完成，不产生 issue 评论；原因链+修复选项征询（`analysis-options`）除外。
 
 其余行为：
 - 分析受阻（或按耗时预算触发）时停 `awaiting_direction`；交互会话内直接问，无人值守且 `auto` 时才发布求助评论；

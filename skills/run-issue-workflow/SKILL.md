@@ -9,18 +9,19 @@ description: 当交互用户希望通过原子 skill 启动、恢复或检查一
 
 选择检查通过后，先初始化唯一目录 `.fde-ai/issues/<issue号>/` 及其 `input/`、`evidence/`、`analysis/`、`solution/`、`patch/`、`build/`、`comment/`、`archive/` 子目录，并在根目录**先写入** `state.json`：唯一状态字段名为 `state`，初始值为 `initialized`，同时记录 issue 编号、revision、profile SHA-256 与更新时间。不得使用 `status` 代替 `state`。然后加载项目配置、构建项目上下文、检查 `state.json`，恰好调用一个有效的原子 skill。该 skill 完成后重新读取并校验产物/状态；仅在调用方要求继续处理时重复。服务器协调器会对同一受信任 issue 自动发起后续调用，直到终态。任何后续技能都只可处理已明确选择的同一编号。唯一 patch 入口是 `.fde-ai/issues/<issue号>/patch/0001-<名称>.patch`；不得在 `.fde-ai/runs/` 创建新产物。
 
-允许的顺序为 `load-project-profile` → `build-project-context` → `fetch-github-issue` → 一个证据分支 → `resolve-manifest-components`（低置信时经 `confirm-component-mapping` 人工确认）→ `cache-provenanced-sources` → `retrieve-knowledge` → `trace-evidence-to-source` → `verify-analysis` → 可选 `design-reproduction-plan`（偶现/根因不确定时）→ `propose-fix` → 可选的 `draft-patch` / `validate-patch-artifact` → 可选 `create-fix-pull-request`（人工确认；只创建/更新 PR、不合入主分支）→ `draft-issue-comment` → `publish-policy-comment`（**交付/验证征询评论必须立即发布到 issue**，不得因等待构建而延迟）→ **仅当 `build.enabled=true` 时** `request-build` → `collect-build-artifacts`（构建结果后到时追加一条简短更新评论）→ `awaiting_verification` →（回复轮询）→ `confirmed_fixed` → `archive-case`。任意阶段受阻时可先走 `escalate-issue`。
+允许的顺序为 `load-project-profile` → `build-project-context` → `fetch-github-issue` → 一个证据分支 → `resolve-manifest-components`（低置信时经 `confirm-component-mapping` 人工确认）→ `cache-provenanced-sources` → `retrieve-knowledge` → `trace-evidence-to-source` → `verify-analysis` → 可选 `design-reproduction-plan`（偶现/根因不确定时）→ `propose-fix` → **分支一（根因明确、修复单一）**：可选的 `draft-patch` / `validate-patch-artifact` → 可选 `create-fix-pull-request`（人工确认；只创建/更新 PR、不合入主分支）→ `draft-issue-comment` → `publish-policy-comment`（**交付/验证征询评论必须立即发布到 issue**，不得因等待构建而延迟）→ **仅当 `build.enabled=true` 时** `request-build` → `collect-build-artifacts`（构建结果后到时追加一条简短更新评论）→ `awaiting_verification` →（回复轮询）→ `confirmed_fixed` → `archive-case`；**分支二（无法立即修复：根因有未证实环节、需复现实验、多条可行路线或需开发决策）**：`draft-analysis-options` → `publish-policy-comment`（`analysis-options`，按 `publication.analysis_options_comment` 发布或留草稿）→ `awaiting_direction` →（回复轮询 `direction_received`）→ 按开发选择回到 `propose-fix`/`draft-patch`。任意阶段受阻时可先走 `escalate-issue`。
 
 **汇报与交互规范（人工交互模式）**：不逐步汇报所有原子步骤——加载配置、构建上下文、拉取 issue、证据提取、知识检索、引用校验等机械步骤内部连续执行，最多一句话带过（服务器队列模式仍按其提示词每次只推进一个原子步骤）。源码检索**一律使用 `rg`** 并限制范围与上限（`timeout`/`head`），禁止 `grep -r` 全树遍历。只在以下**关键节点**停下汇报，并给出 A/B/C 选项等待选择：
 
 1. **定位结论**：证据提取与组件归属完成——问题落在哪个组件的哪个功能；
 2. **根因结论**：分析校验通过——一句话根因 + 因果链要点；**若根因仅来自代码推断且问题偶现，A/B/C 必须包含“设计复现与验证方案（无法从代码完全确认时用实验定位根因）”选项**；
-3. **修复方案**：推荐改法与替代方案、风险（`not_run`）；
-4. **复现与验证方案（偶现/根因不确定时）**：稳定复现方法（无侵入脚本 → 轻插桩 → 需构建的深插桩）、观测点、修复后验证判定与根因确认实验（`design-reproduction-plan`）；
-5. **求助（任意阶段受阻时）**：当前进度、已排除方向、具体问题与 A/B/C 选项（`escalate-issue`）；
-6. **代码修改**：**用统一 diff 直接展示修改**（引用 patch 文件的关键 hunk，不得只给路径），并逐处说明修改目的；该节点的 A/B/C 应包含“生成 PR（只创建、不合入主分支）”“只保留补丁文件”“暂停”等选项；
-7. **校验结果**：补丁结构与来源校验的通过项/问题项；
-8. **评论草稿与验证征询**：草稿路径与要点；交付后请开发人员回复 `验证通过` 或 `仍有问题`（附新日志/截图）。
+3. **修复方案**：推荐改法与替代方案（多条路线时按 A/B/C 编号，含改动点/风险/验证判据）、风险（`not_run`）；
+4. **原因链与修复选项回复（无法立即修复时）**：展示原因链要点与 A/B/C 修复选项——A. 发布原因链+修复选项到 issue，请开发选择（推荐）；B. 直接按推荐方案生成 PR；C. 暂停/补充证据。根因有未证实环节、需复现实验或需开发决策时**不得自行选路线**；
+5. **复现与验证方案（偶现/根因不确定时）**：稳定复现方法（无侵入脚本 → 轻插桩 → 需构建的深插桩）、观测点、修复后验证判定与根因确认实验（`design-reproduction-plan`）；
+6. **求助（任意阶段受阻时）**：当前进度、已排除方向、具体问题与 A/B/C 选项（`escalate-issue`）；
+7. **代码修改**：**用统一 diff 直接展示修改**（引用 patch 文件的关键 hunk，不得只给路径），并逐处说明修改目的；该节点的 A/B/C 应包含“生成 PR（只创建、不合入主分支）”“只保留补丁文件”“暂停”等选项；
+8. **校验结果**：补丁结构与来源校验的通过项/问题项；
+9. **评论草稿与验证征询**：草稿路径与要点；交付后请开发人员回复 `验证通过` 或 `仍有问题`（附新日志/截图）。
 
 关键节点汇报格式（结论在前、简洁）：
 
@@ -54,11 +55,13 @@ C. 暂停本轮
 
 **继续命令（交互会话，优先使用）**：在会话中说“继续 <编号>”时——先重读 `state.json`；若处于 `awaiting_direction`/`awaiting_verification`，先执行一次 `sync-github-replies` 检查 issue 新回复并据此更新状态；若开发人员在会话中直接给出选择/方向，则将其写入 `analysis/direction.json`（来源标注 `session`）后继续。然后按最新状态继续；该命令对**任意中间状态**都适用（包括无人值守停下的 `patch_validated` 等）。关键节点的 A/B/C **直接在本会话内询问并等待**，不在 issue 发交互评论（issue 评论仅用于无人值守的 PR 交付场景）。
 
-**无人值守运行的收尾规则**：非交互运行（无会话）中遇到任何需要人工选择的节点——求助、补丁完成后的下一步、验证征询等——**必须停在受监控的等待态**（`awaiting_direction`/`awaiting_verification`），不得只把问题写进日志后停在无监控的中间态（如 `patch_validated`），否则无人能接手。发布规则：默认 `pr_only`——**只有包含 PR 的交付/验证征询评论会发布到 issue**，其他决策不发布、等待开发者回到会话用“继续 <编号>”接管；`auto` 时求助评论（A/B/C）也发布；`manual` 时任何交互评论都不发布。日志只作为审计记录。
+**无人值守运行的收尾规则**：非交互运行（无会话）中遇到任何需要人工选择的节点——求助、补丁完成后的下一步、验证征询等——**必须停在受监控的等待态**（`awaiting_direction`/`awaiting_verification`），不得只把问题写进日志后停在无监控的中间态（如 `patch_validated`），否则无人能接手。发布规则：默认 `pr_only`——**只有包含 PR 的交付/验证征询评论会发布到 issue**，其他决策不发布、等待开发者回到会话用“继续 <编号>”接管；`publication.analysis_options_comment=auto` 时，原因链+修复选项征询评论（`analysis-options`）也可发布并停在 `awaiting_direction`；`auto` 时求助评论（A/B/C）也发布；`manual` 时任何交互评论都不发布。日志只作为审计记录。
+
+**无法立即修复的交付规则（硬性）**：当根因存在未证实环节、需要复现实验、存在多条互相权衡的修复路线或改动影响面需要开发决策时，**不得自行选择修复路线直接生成 PR**；必须 `draft-analysis-options`（完整原因链 + A/B/C 修复选项）→ `publish-policy-comment`（`analysis-options`）→ 停在 `awaiting_direction`。开发人员选择 A/B/C 后由 `sync-github-replies` 写入 `analysis/direction.json`，再按所选路线继续 `propose-fix`/`draft-patch`/`create-fix-pull-request`。原因链必须是纯技术分析（触发条件、毫秒级时间线、完整因果链、直接/根本原因、容错失效、未证实环节、影响面、排除项），每个结论带证据或源码位置，禁止套话和空泛总结。
 
 **PR 与 issue 的同步规则（硬性）**：`create-fix-pull-request` 创建或更新 PR 后，编排**必须立即执行 `draft-issue-comment` → `publish-policy-comment`**，把该 revision 的交付/验证征询评论发布到 issue（`pr_only` 下这是唯一必发的过程评论）；不得因等待构建、等待人工或其他步骤而延迟。更新已有 PR 时，评论中注明更新后的分支/提交。构建结果若后到，追加一条简短更新评论。
 
-**人机闭环**：分析受阻（连续排查无高置信结论、证据矛盾、模型自评估无法继续）时调用 `escalate-issue` 生成带 A/B/C 的求助评论（按 `publication.interaction_comments` 可自动发布）并停在 `awaiting_direction`；开发人员的回复（选项、方向或自由文本）由 `sync-github-replies` 轮询读取，写入 `analysis/direction.json` 后带着该方向继续（`direction_received`）。交付修复后进入 `awaiting_verification`（评论含“验证征询”段落）：回复“验证通过”→ `confirmed_fixed` → `archive-case`；回复“仍有问题（附新日志/截图）”→ 归档旧 revision、`revision+1`、从 `issue_fetched` 重新分析。issue 关闭始终由人工完成。
+**人机闭环**：分析受阻（连续排查无高置信结论、证据矛盾、模型自评估无法继续）时调用 `escalate-issue` 生成带 A/B/C 的求助评论（按 `publication.interaction_comments` 可自动发布）并停在 `awaiting_direction`；开发人员的回复（选项、方向或自由文本）由 `sync-github-replies` 轮询读取，写入 `analysis/direction.json` 后带着该方向继续（`direction_received`）。**无法立即修复**时按“无法立即修复的交付规则”发布原因链+修复选项（`analysis-options`）并等待开发选择；选择结果同样经 `direction.json` 回到修复流程。交付修复后进入 `awaiting_verification`（评论含“验证征询”段落）：回复“验证通过”→ `confirmed_fixed` → `archive-case`；回复“仍有问题（附新日志/截图）”→ 归档旧 revision、`revision+1`、从 `issue_fetched` 重新分析。issue 关闭始终由人工完成。
 
 **耗时预算（求助触发）**：同一目标（定位组件、根因或某个符号）连续探索约 **10 分钟**、或多次检索仍无进展时，必须停下调用 `escalate-issue`：列出已掌握线索、已排除项与候选方向（A/B/C），请开发人员指方向；不得无限期硬耗。外部/搜索命令一律带 `timeout`（建议 ≤300 秒）与结果上限。
 

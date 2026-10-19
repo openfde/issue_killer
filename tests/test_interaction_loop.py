@@ -11,6 +11,7 @@ class InteractionLoopTests(unittest.TestCase):
         profile = json.loads((ROOT / "profiles/openfde/profile.json").read_text(encoding="utf-8"))
 
         self.assertEqual(profile["publication"]["interaction_comments"], "pr_only")
+        self.assertEqual(profile["publication"]["analysis_options_comment"], "auto")
         self.assertEqual(profile["replies"]["poll_seconds"], 180)
 
     def test_escalation_skill_publishes_options_and_waits(self):
@@ -35,6 +36,7 @@ class InteractionLoopTests(unittest.TestCase):
 
         publish = (ROOT / "skills/publish-policy-comment/SKILL.md").read_text(encoding="utf-8")
         self.assertIn("awaiting_verification", publish)
+        self.assertIn("awaiting_direction", publish)
 
     def test_reply_poll_script_checks_only_waiting_issues(self):
         script = (ROOT / "deploy/reply-poll.sh").read_text(encoding="utf-8")

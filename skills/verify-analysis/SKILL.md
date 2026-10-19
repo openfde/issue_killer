@@ -7,4 +7,6 @@ description: 当源码追溯分析在提出修复方案前需要确定性校验�
 
 仅接收 `root_cause_traced`。校验每个 claim 引用的哈希、证据 ID、组件来源、精确 commit、源码路径和行范围。只写入 `.fde-ai/issues/<issue号>/analysis/analysis-validation.json`，包含失败项和过期依赖。不得在 `.fde-ai/runs/` 创建新产物。
 
+同时校验原因链完整性：触发条件与前置状态、完整因果链、直接原因、根本原因、容错失效、未证实环节、影响面与已排除项；缺项即停止补充，不得带着缺口推进。
+
 仅在所有必需引用均校验通过时推进到 `analysis_verified`。引用缺失、过期或矛盾时停止。此步骤校验产物完整性，不校验运行时行为。

@@ -57,17 +57,23 @@ load-project-profile
 → verify-analysis
 → 可选 design-reproduction-plan（偶现/根因不确定时：复现与验证方案）
 → propose-fix
-→ 可选 draft-patch / validate-patch-artifact
-→ 可选 create-fix-pull-request（人工确认；只创建/更新 PR，不合入）
-→ draft-issue-comment → publish-policy-comment（交付/验证征询评论必须立即发布到 issue）
-→ 仅当 build.enabled=true 时 request-build → collect-build-artifacts（构建结果后到时追加更新评论）
-→ awaiting_verification（等待人工自测；sync-github-replies 轮询回复）
-→ confirmed_fixed → archive-case
+→ 分支一（根因明确、修复单一）：
+   可选 draft-patch / validate-patch-artifact
+   → 可选 create-fix-pull-request（人工确认；只创建/更新 PR，不合入）
+   → draft-issue-comment → publish-policy-comment（交付/验证征询评论必须立即发布到 issue）
+   → 仅当 build.enabled=true 时 request-build → collect-build-artifacts（构建结果后到时追加更新评论）
+   → awaiting_verification（等待人工自测；sync-github-replies 轮询回复）
+   → confirmed_fixed → archive-case
+→ 分支二（无法立即修复/需开发决策）：
+   draft-analysis-options（完整原因链 + A/B/C 修复选项）
+   → publish-policy-comment（analysis-options；按 publication.analysis_options_comment 发布或留草稿）
+   → awaiting_direction（开发人员选择 A/B/C；sync-github-replies → direction_received）
+   → 按所选路线回到 propose-fix / draft-patch
 ```
 
 构建通道**默认关闭**（`build.enabled=false`，调试 L0-L2 期间不进入）。
 
-分析受阻或耗时超预算（同一目标约 10 分钟无进展）时，`escalate-issue` 发布带 A/B/C 的求助评论并停在 `awaiting_direction`；开发人员的回复由 `sync-github-replies` 按内容宽容解析：选项/方向 → 带方向继续（`direction_received`）；仍有问题+证据 → 新 revision 重新分析；验证通过 → `confirmed_fixed` 收敛归档。issue 关闭始终由人工完成。
+分析受阻或耗时超预算（同一目标约 10 分钟无进展）时，`escalate-issue` 发布带 A/B/C 的求助评论并停在 `awaiting_direction`；无法立即修复（根因有未证实环节、需复现实验、多条可行路线或需开发决策）时，`draft-analysis-options` 产出完整原因链 + A/B/C 修复选项并发布（`analysis-options`）等待开发选择，不自行选路线。开发人员的回复由 `sync-github-replies` 按内容宽容解析：选项/方向 → 带方向继续（`direction_received`）；仍有问题+证据 → 新 revision 重新分析；验证通过 → `confirmed_fixed` 收敛归档。issue 关闭始终由人工完成。
 
 证据不足、状态校验失败或需要人工信息时，流程进入 `needs_information` 或 `blocked`，而不是猜测根因。开发者新增回复、新日志或用户测试失败会创建新的分析版本，不覆盖旧证据。
 
