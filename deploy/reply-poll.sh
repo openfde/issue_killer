@@ -42,6 +42,5 @@ while :; do
             esac
         fi
     done
-    bash deploy/intake-watch.sh >> /dev/null 2>&1
     sleep "$INTERVAL"
 done

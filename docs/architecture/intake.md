@@ -16,15 +16,19 @@
 
 服务器连不上设备时，助手直接在对话里给出 PC 端命令（`adb bugreport`、`adb exec-out screencap`、`adb pull`）由测试人员执行，不生成脚本文件。
 
-## 最简 issue + 自动整理（推荐给测试人员）
+## 最简 issue + 手动整理命令
 
-测试人员不必先跑取证助手，直接提交一句话（+ bugreport 附件）即可：
+测试人员可以只提交一句话（+ bugreport 或截图），**创建时助手不参与**；创建完成后显式执行整理命令：
 
-1. issue 正文尽量短，附上 bugreport（GitHub 附件 ≤25MB；超限时在正文写 VM 上的文件路径，助手生成时间窗摘录包后由人工补充）；
-2. 轮询每 3 分钟扫描新提交的最简 issue（短正文 + 附件链接、无 `openfde-ai:intake` marker、无 `no-ai-reply` 标签），自动调用 `enrich-issue-intake`：
-   - 标题整理为 `<现象摘要>（<版本号>）`；
-   - 正文整理为 现象 / **时间线（事后补抓，发生时间只写范围）** / 环境 / **复现步骤（推测，未确认）** / 预期与实际 / 附件（不写 SHA-256）/ **下次偶现采集建议** / 备注，并完整保留原始描述；
-3. 助手只编辑该 issue（`gh issue edit`），不关闭、不发评论、不改附件；`publication.issue_enrichment=manual` 可关闭自动整理。
+- pi 会话内：`/skill:enrich-issue-intake 整理问题 #N`
+- 或 shell：`bash deploy/enrich-issue.sh N`
+
+整理规则：
+
+1. 只编辑该 issue 的标题与正文（`gh issue edit`），不关闭、不发评论、不改附件；
+2. **有 bugreport**：标题整理为 `<现象摘要>（<版本号>）`；正文含 现象 / 时间线（发生时间只写范围）/ 环境 / 复现步骤（推测，未确认）/ 预期与实际 / 附件（不写 SHA-256）/ 下次偶现采集建议，并完整保留原始描述；
+3. **没有 bugreport（仅文字 + 截图）**：用模型视觉直接读图（无 OCR），在正文增加 **“初步分析（未验证）”**：现象解读、1~3 个可疑组件/方向（结合 component-map，标注推测）、建议补充的证据（如 bugreport、对应子系统日志）；并标注“**无日志证据**”；
+4. marker 防重复整理；不得批量扫描或自动选择新 issue。
 
 ## 偶现 / 事后取证（D 模式）
 

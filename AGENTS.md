@@ -12,7 +12,7 @@
 - 任何 GitHub 详情读取、附件下载或源码下载前，必须取得当前调用方显式指定的问题编号或完整 URL；不得从问题列表、旧产物或上下文自行选择。唯一例外是受信任的服务器队列明确传入的编号；它只能处理该编号。
 - 所有 GitHub 问题、评论和仓库元数据读取使用共享 GitHub 命令行工具 `gh`；先运行 `gh auth status`，只允许 `gh issue` 和只读 `gh api` 调用，不使用专有连接器或 Python GitHub API 请求。
 - 人机闭环：受阻时经 `escalate-issue` 发布带 A/B/C 的求助评论并停在 `awaiting_direction`；交付修复经 `publish-policy-comment` 后在 `awaiting_verification` 等待自测结论；开发人员回复由 `sync-github-replies` 宽容解析（选项/方向/仍有问题+证据/验证通过），据此继续分析或收敛为 `confirmed_fixed`；issue 关闭始终由人工完成。
-- 最简 issue 自动整理：测试人员可只提交一句话+bugreport；`deploy/intake-watch.sh`（随 `reply-poll.sh` 每 3 分钟）发现新的最简 issue（短正文+附件、无 `openfde-ai:intake` marker、无 `no-ai-reply` 标签）后，调用 `enrich-issue-intake` 把标题/正文整理为标准取证格式（保留原始描述、不写 SHA-256、发生时间只能写范围）；只编辑新提交且属于当前 gh 用户的 issue，不关闭、不发评论、不改附件；`publication.issue_enrichment=manual` 可关闭自动整理。
+- 最简 issue 整理（手动）：测试人员可只提交一句话（+bugreport 或截图）；创建完成后由调用方显式执行整理命令——pi 内 `/skill:enrich-issue-intake 整理问题 #N` 或 shell `bash deploy/enrich-issue.sh N`。整理只编辑该 issue 的标题/正文（保留原始描述、不写 SHA-256、发生时间只写范围），不关闭、不发评论、不改附件；有 bugreport 走标准取证格式，无 bugreport（仅文字+截图）时用模型视觉读图并给出“初步分析（未验证）”。不得自动扫描或自行选择新 issue。
 - 仓库 Git 提交信息（标题与正文）一律使用英文。
 - 在 Pi 中从 `/skill:run-issue-workflow` 开始分析。除经 `request-build` 或人工调用的授权构建助手，以及经人工在关键节点确认的 `create-fix-pull-request`（独立工作区内应用补丁、推送 `ai/` 分支、创建 MR/PR，只创建不合入主分支；修复跨多个项目时按项目分别创建 PR，并由评论附上全部链接）外，不得修改源码、应用补丁、提交、推送或创建 PR；补丁只能作为未验证建议，按项目配置的发布策略以统一 diff 的问题评论草稿形式存在，不得发布。
 <!-- openfde-workflow:end -->
