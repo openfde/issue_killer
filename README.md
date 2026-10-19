@@ -212,7 +212,7 @@ export PI_TELEMETRY=0
 ```sh
 cd fde-ai-assistant
 chmod +x deploy/*.sh deploy/server/*.sh
-python3 -m unittest discover -s tests -p "test_*.py"   # 当前应为 79 个测试全部通过
+python3 -m unittest discover -s tests -p "test_*.py"   # 当前应为 86 个测试全部通过
 pi --version
 gh auth status
 ls .pi/skills | head                                # 34 个 skill 符号链接
@@ -470,7 +470,7 @@ deploy/server/fde-ai-build.sh --issue <编号>
 python3 -m unittest discover -s tests -p "test_*.py"
 ```
 
-当前基线 85 个测试全部通过。
+当前基线 86 个测试全部通过。
 
 ### 6.12 知识沉淀（可选）
 
