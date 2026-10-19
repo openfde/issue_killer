@@ -9,17 +9,18 @@ description: 当交互用户希望通过原子 skill 启动、恢复或检查一
 
 选择检查通过后，先初始化唯一目录 `.fde-ai/issues/<issue号>/` 及其 `input/`、`evidence/`、`analysis/`、`solution/`、`patch/`、`build/`、`comment/`、`archive/` 子目录，并在根目录**先写入** `state.json`：唯一状态字段名为 `state`，初始值为 `initialized`，同时记录 issue 编号、revision、profile SHA-256 与更新时间。不得使用 `status` 代替 `state`。然后加载项目配置、构建项目上下文、检查 `state.json`，恰好调用一个有效的原子 skill。该 skill 完成后重新读取并校验产物/状态；仅在调用方要求继续处理时重复。服务器协调器会对同一受信任 issue 自动发起后续调用，直到终态。任何后续技能都只可处理已明确选择的同一编号。唯一 patch 入口是 `.fde-ai/issues/<issue号>/patch/0001-<名称>.patch`；不得在 `.fde-ai/runs/` 创建新产物。
 
-允许的顺序为 `load-project-profile` → `build-project-context` → `fetch-github-issue` → 一个证据分支 → `resolve-manifest-components`（低置信时经 `confirm-component-mapping` 人工确认）→ `cache-provenanced-sources` → `retrieve-knowledge` → `trace-evidence-to-source` → `verify-analysis` → `propose-fix` → 可选的 `draft-patch` / `validate-patch-artifact` → 可选 `create-fix-pull-request`（人工确认；只创建/更新 PR、不合入主分支）→ `draft-issue-comment` → `publish-policy-comment`（**交付/验证征询评论必须立即发布到 issue**，不得因等待构建而延迟）→ **仅当 `build.enabled=true` 时** `request-build` → `collect-build-artifacts`（构建结果后到时追加一条简短更新评论）→ `awaiting_verification` →（回复轮询）→ `confirmed_fixed` → `archive-case`。任意阶段受阻时可先走 `escalate-issue`。
+允许的顺序为 `load-project-profile` → `build-project-context` → `fetch-github-issue` → 一个证据分支 → `resolve-manifest-components`（低置信时经 `confirm-component-mapping` 人工确认）→ `cache-provenanced-sources` → `retrieve-knowledge` → `trace-evidence-to-source` → `verify-analysis` → 可选 `design-reproduction-plan`（偶现/根因不确定时）→ `propose-fix` → 可选的 `draft-patch` / `validate-patch-artifact` → 可选 `create-fix-pull-request`（人工确认；只创建/更新 PR、不合入主分支）→ `draft-issue-comment` → `publish-policy-comment`（**交付/验证征询评论必须立即发布到 issue**，不得因等待构建而延迟）→ **仅当 `build.enabled=true` 时** `request-build` → `collect-build-artifacts`（构建结果后到时追加一条简短更新评论）→ `awaiting_verification` →（回复轮询）→ `confirmed_fixed` → `archive-case`。任意阶段受阻时可先走 `escalate-issue`。
 
 **汇报与交互规范（人工交互模式）**：不逐步汇报所有原子步骤——加载配置、构建上下文、拉取 issue、证据提取、知识检索、引用校验等机械步骤内部连续执行，最多一句话带过（服务器队列模式仍按其提示词每次只推进一个原子步骤）。源码检索**一律使用 `rg`** 并限制范围与上限（`timeout`/`head`），禁止 `grep -r` 全树遍历。只在以下**关键节点**停下汇报，并给出 A/B/C 选项等待选择：
 
 1. **定位结论**：证据提取与组件归属完成——问题落在哪个组件的哪个功能；
-2. **根因结论**：分析校验通过——一句话根因 + 因果链要点；
+2. **根因结论**：分析校验通过——一句话根因 + 因果链要点；**若根因仅来自代码推断且问题偶现，A/B/C 必须包含“设计复现与验证方案（无法从代码完全确认时用实验定位根因）”选项**；
 3. **修复方案**：推荐改法与替代方案、风险（`not_run`）；
-4. **求助（任意阶段受阻时）**：当前进度、已排除方向、具体问题与 A/B/C 选项（`escalate-issue`）；
-5. **代码修改**：**用统一 diff 直接展示修改**（引用 patch 文件的关键 hunk，不得只给路径），并逐处说明修改目的；该节点的 A/B/C 应包含“生成 PR（只创建、不合入主分支；跨多个项目时按项目分别生成并附全部链接）”“只保留补丁文件”“暂停”等选项；
-6. **校验结果**：补丁结构与来源校验的通过项/问题项；
-7. **评论草稿与验证征询**：草稿路径与要点；交付后请开发人员回复 `验证通过` 或 `仍有问题`（附新日志/截图）。
+4. **复现与验证方案（偶现/根因不确定时）**：稳定复现方法（无侵入脚本 → 轻插桩 → 需构建的深插桩）、观测点、修复后验证判定与根因确认实验（`design-reproduction-plan`）；
+5. **求助（任意阶段受阻时）**：当前进度、已排除方向、具体问题与 A/B/C 选项（`escalate-issue`）；
+6. **代码修改**：**用统一 diff 直接展示修改**（引用 patch 文件的关键 hunk，不得只给路径），并逐处说明修改目的；该节点的 A/B/C 应包含“生成 PR（只创建、不合入主分支）”“只保留补丁文件”“暂停”等选项；
+7. **校验结果**：补丁结构与来源校验的通过项/问题项；
+8. **评论草稿与验证征询**：草稿路径与要点；交付后请开发人员回复 `验证通过` 或 `仍有问题`（附新日志/截图）。
 
 关键节点汇报格式（结论在前、简洁）：
 

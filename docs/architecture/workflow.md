@@ -55,6 +55,7 @@ load-project-profile
 → retrieve-knowledge
 → trace-evidence-to-source
 → verify-analysis
+→ 可选 design-reproduction-plan（偶现/根因不确定时：复现与验证方案）
 → propose-fix
 → 可选 draft-patch / validate-patch-artifact
 → 可选 create-fix-pull-request（人工确认；只创建/更新 PR，不合入）

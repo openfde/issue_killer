@@ -98,6 +98,17 @@ python3 automation/openfde_ai_server.py \
 
 全程只读：禁止 root、禁止 `logcat -c`、禁止安装/卸载/改设置。
 
+## 复现与验证方案（偶现问题）
+
+当根因只能由代码推断、无法完全确认时，在根因节点选择“设计复现与验证方案”（`design-reproduction-plan`）。它会产出：
+
+- **稳定复现**：无侵入 adb 循环脚本（如快速切换 dock 缩略图与桌面应用）→ 轻插桩日志 → 需构建的深插桩（断言/trace/perfetto）；
+- **观测点**：目标 crash 签名、`logcat -b crash`、tombstone/dropbox、关键 tag；
+- **判定标准**：N 次运行出现 ≥1 次目标签名即“已复现”；修复后同一脚本 N 次 0 次目标签名 + 错误日志消失即“通过”；
+- **根因确认实验**：列出可区分的假设与实验，说明每个结果支持/排除哪个假设——保证在代码无法确认时仍能通过实验定位根因。
+
+方案仅供人工执行（全部 `not_run`），需要构建的插桩会提示开启 `build.enabled=true`。
+
 ## 求助与验证闭环
 
 **交互通道与占比（`publication.interaction_comments`）**：
