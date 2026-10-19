@@ -1,6 +1,6 @@
 # Docker 部署（无需 AOSP 构建）
 
-根目录 [README](../../README.md) 是完整入口。本页只补充容器部署细节。
+根目录 [README](../../README.md) 是完整入口；**安装 Docker/Compose、Docker Hub 镜像加速、首次源码同步、验证与排障见 [README 6.9](../../README.md#69-docker-一键部署无-aosp-构建推荐)**。本页只补充容器运行细节。
 
 适用：Linux 服务器 + Docker Compose v2；不需要 AOSP 构建工具链，只需要 `fde-manifests` 与 `fde-sources`（首次默认从 GitHub 镜像同步模块子集）。
 

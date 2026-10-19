@@ -31,6 +31,8 @@ export DEEPSEEK_API_KEY='...'        # 其他模型：PI_PROVIDER/PI_MODEL + 对
 docker exec -it openfde-ai bash      # 进入容器后运行 pi
 ```
 
+完整安装（含 Docker/Compose 安装、镜像加速、验证、停止与排障）见 [6.9 Docker 一键部署](#69-docker-一键部署无-aosp-构建推荐)。
+
 ## 目录
 
 - [1. 能力与边界](#1-能力与边界)
@@ -439,7 +441,184 @@ REPLY_POLL_SECONDS=600 nohup bash deploy/reply-poll.sh >>/dev/null 2>&1 &   # �
 - 回复“验证通过” → `confirmed_fixed` → `archived`（issue 关闭仍人工）；
 - `awaiting_direction` 超过 30 分钟仅写日志/下次会话提示，不自动深挖。
 
-### 6.9 无人值守 / 服务端（可选）
+### 6.9 Docker 一键部署（无 AOSP 构建，推荐）
+
+适用于 Linux 服务器；**不需要 AOSP 构建工具链**。已在 Ubuntu 20.04 + Docker 26.1.3 + Compose v2.27.1 实测：安装 → 配置 → 首次同步 48 个源码仓库 → 启动 scanner/poller → 容器内 Pi 验证。
+
+#### 1) 安装 Docker 与 Compose v2
+
+优先使用 Docker 官方脚本：
+
+```sh
+curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker "$USER"
+newgrp docker
+docker --version && docker compose version
+```
+
+如果 `download.docker.com` 被网络阻断（本机实测），改用 Ubuntu 源：
+
+```sh
+sudo apt-get update
+sudo apt-get install -y docker.io docker-compose-v2
+sudo systemctl enable --now docker
+sudo usermod -aG docker "$USER"
+newgrp docker
+docker --version && docker compose version
+```
+
+其他发行版安装 Docker Engine + Compose v2 插件即可，最终确认 `docker compose version` 可用。
+
+#### 2) Docker Hub 被阻断时配置镜像加速
+
+```sh
+sudo mkdir -p /etc/docker
+sudo tee /etc/docker/daemon.json >/dev/null <<'EOF'
+{
+  "registry-mirrors": ["https://docker.m.daocloud.io", "https://docker.1ms.run"]
+}
+EOF
+sudo systemctl restart docker
+docker pull node:24-bookworm-slim
+```
+
+镜像源由第三方提供，仅在 Docker Hub 不可达时使用；能直连时不要配置。
+
+#### 3) 获取代码
+
+```sh
+git clone git@src.ift.run:ai-apps/fde-ai-assistant.git
+cd fde-ai-assistant
+```
+
+无法访问内网 Git 时，可从已有环境同步代码（不拷贝 11G 源码）：
+
+```sh
+mkdir -p ~/fde-ai-assistant && cd ~/fde-ai-assistant
+rsync -a --exclude fde-sources --exclude fde-manifests --exclude .fde-ai --exclude data \
+  huyang@192.168.227.129:~/fde-ai-assistant/ ./
+```
+
+#### 4) 配置凭据
+
+GitHub token 的创建与权限（经典 PAT `repo` + `read:org`，或 fine-grained Issues/Contents/PR 读写 + Metadata 读取）见 [4.4 GitHub Token 配置](#44-github-token-配置ghtoken)。Docker 容器不共享宿主 `gh` 登录态，必须显式提供：
+
+```sh
+export GH_TOKEN='ghp_...'
+export DEEPSEEK_API_KEY='...'          # 默认模型
+# 其他模型：
+# export PI_PROVIDER=openai PI_MODEL=<model> OPENAI_API_KEY='...'
+# export PI_BASE_URL=https://...       # OpenAI 兼容网关
+```
+
+`up.sh` 会自动生成 `.env`（已加入 `.gitignore`）；已 export 的变量优先，不会被 `.env` 覆盖。也可以直接编辑 `.env`：
+
+```sh
+GH_TOKEN=ghp_...
+DEEPSEEK_API_KEY=...
+```
+
+#### 5) 一键启动
+
+```sh
+./deploy/docker/up.sh
+```
+
+脚本会：自动生成 `.env` → 检查凭据 → 生成 `config/openfde-ai-server.json` → 缺失时克隆 `fde-manifests` → 构建镜像 → 启动 `sources-sync`、`scanner`、`poller`。
+
+首次 `sources-sync` 默认按 `deploy/docker/github-sources.tsv` 同步 GitHub 镜像（48 个仓库，分支 `fde_17`），并按 `FDE_SOURCE_MODULES`（默认 `art build device external frameworks hardware openfde-sdk packages prebuilts system`）过滤；已有仓库复用。内部 GitLab 可达时可 `FDE_SYNC_MODE=repo`；已有完整源码树可 `FDE_SYNC_MODE=none`。
+
+```sh
+docker logs -f openfde-ai-sources     # 首次同步；完成后退出码 0
+docker compose ps -a
+docker logs -f openfde-ai            # scanner
+docker logs -f openfde-ai-poller     # 回复轮询
+```
+
+国内网络可在 `.env` 设置 `NPM_REGISTRY=https://registry.npmmirror.com` 与 `REPO_URL` 覆盖镜像构建源。
+
+#### 6) 验证安装
+
+```sh
+docker exec -it openfde-ai bash
+pi --version
+rg --version
+gh auth status
+pi auth check --provider deepseek --model deepseek-flash
+ls .pi/skills | wc -l                 # 34
+git -C fde-sources/frameworks/base rev-parse --short HEAD
+pi --no-session -p "回复 OK"
+pi
+```
+
+- `gh auth status` 提示缺少 `read:org` 不影响 issue 读取；补 scope 后重建容器即可。
+- 模型调用返回 `OK` 表示 provider/key 正常；其他模型替换 `--provider/--model`。
+
+容器内跑一条只读 skill 验证：
+
+```text
+/skill:list-github-issues 使用 profiles/openfde/profile.json 列出全部问题的编号、状态、标题、标签和更新时间；不要下载详情或写入 GitHub。
+```
+
+#### 7) 日常使用与退出
+
+```sh
+docker exec -it openfde-ai bash
+pi
+```
+
+或直接进入 Pi：
+
+```sh
+docker exec -it openfde-ai pi
+./deploy/docker/pi.sh
+```
+
+退出：
+
+- 在 `pi` 内输入 `/quit` 或 `/exit`（也可 `Ctrl+D`）；
+- 回到容器 shell 后 `exit`（或 `Ctrl+D`）返回宿主机；
+- `docker exec ... pi` 退出 Pi 即回宿主机；退出 `exec` 不会停止 scanner/poller。
+
+#### 8) scanner 工作模式
+
+`config/openfde-ai-server.json` 的 `worker.execute`：
+
+- `true`：扫描并自动分析 issue（会产生模型调用）；
+- `false`：只发现/入队，不自动分析（验证安装时建议）。
+
+修改后执行：
+
+```sh
+docker restart openfde-ai
+```
+
+#### 9) 停止与清理
+
+```sh
+cd ~/fde-ai-assistant
+docker compose down          # 停止并删除容器；保留命名卷
+docker compose down -v       # 同时删除容器内 .fde-ai/data 卷（不动 fde-sources/fde-manifests）
+docker image prune -f        # 清理构建产生的 <none> 悬空镜像
+docker rmi openfde-ai-assistant:pi   # 可选：删除镜像，下次 up 重新构建
+```
+
+`docker compose down` 必须在 `compose.yaml` 所在目录执行；在 `~` 下会报 `no configuration file provided`。
+
+#### 10) 常见问题
+
+- **Docker Hub i/o timeout**：配置第 2 步的 `registry-mirrors` 并重启 Docker；
+- **`download.docker.com` 连接重置**：改用第 1 步的 `docker.io` + `docker-compose-v2`；
+- **`docker compose` 不存在**：安装 Compose v2 插件（`docker-compose-v2` 或 Docker 官方 repo）；
+- **`.bashrc` 里 source 不生效**：Ubuntu `.bashrc` 对非交互 shell 会提前 `return`；直接 `export` 或写入 `.env`；
+- **`docker compose down` 报找不到配置**：先 `cd ~/fde-ai-assistant`；
+- **`sources-sync` 失败**：`docker logs openfde-ai-sources`；检查 GitHub 网络/模块列表；必要时 `FDE_SYNC_MODE=none` 使用已有源码；
+- **模型不可用**：`pi auth check --provider <p> --model <m>`，检查对应 API key / `PI_BASE_URL`；
+- **token 更新不生效**：容器环境变量在创建时固定；重新运行 `./deploy/docker/up.sh`（或 `docker compose up -d --force-recreate`）；
+- **权限**：`sudo usermod -aG docker "$USER"` 后重新登录或 `newgrp docker`；源码同步以 root 写入并 `chmod -R a+rX`，运行服务以 UID 1000 只读访问；
+- **退出不要用 `Ctrl+C` 停服务**：`Ctrl+C` 通常只中断当前操作；停服务用 `docker compose down`。
+
+### 6.10 无人值守 / 服务端（可选）
 
 ```sh
 # 队列与状态
@@ -463,43 +642,6 @@ python3 automation/openfde_ai_server.py --workspace "$PWD" \
   --config config/openfde-ai-server.json requeue --issue <编号>
 ```
 
-Docker 一键（无 AOSP 构建，Linux 服务器）：
-
-```sh
-export GH_TOKEN='...'
-export DEEPSEEK_API_KEY='...'
-# 切换模型示例：
-# export PI_PROVIDER=openai PI_MODEL=<model> OPENAI_API_KEY='...'
-# export PI_BASE_URL=https://...          # OpenAI 兼容网关
-./deploy/docker/up.sh                     # 自动生成 .env；首次同步源码
-
-docker exec -it openfde-ai bash           # 进入后运行 pi
-# 或直接：docker exec -it openfde-ai pi
-# 或：./deploy/docker/pi.sh
-
-docker logs -f openfde-ai-sources         # 首次源码同步
-docker logs -f openfde-ai                 # scanner
-docker logs -f openfde-ai-poller          # 回复轮询
-FORCE_SYNC=1 ./deploy/docker/up.sh        # 重新同步
-docker compose down                       # 不要用 down -v
-```
-
-**退出容器**
-
-- 在 `pi` 内：输入 `/quit` 或 `/exit`（也可按 `Ctrl+D`）；
-- 回到容器 shell 后：输入 `exit`（或按 `Ctrl+D`）返回宿主机；
-- 如果用的是 `docker exec -it openfde-ai pi`，退出 Pi 即直接回到宿主机；
-- 退出 `exec` 不会停止 scanner/poller；停止服务用 `docker compose down`，重新启动用 `./deploy/docker/up.sh`。
-
-- 模型：`PI_PROVIDER`/`PI_MODEL` 写入 Pi settings（默认 `deepseek/deepseek-flash`）；其他提供方使用对应的 `*_API_KEY`，`PI_BASE_URL` 可指向 OpenAI 兼容网关。
-
-- `sources-sync`（一次性）：默认按 GitHub 镜像（48 个仓库，`fde_17`）同步，并按 `FDE_SOURCE_MODULES`（默认 `art build device external frameworks hardware openfde-sdk packages prebuilts system`）过滤；已有仓库复用。`FDE_SYNC_MODE=repo` 改用 Android `repo init/sync`，`none` 跳过（使用已准备好的树）。
-- `scanner`：定时扫描 + worker；`poller`：5 分钟回复轮询；`shell`：交互式 Pi（profile `tools`）。
-- `sources-sync` 以 root 写入源码并 `chmod -R a+rX`；`scanner`/`poller`/`shell` 以镜像内 `agent`（UID 1000）只读访问源码。
-- 队列/工件在命名卷 `openfde_ai_state`/`openfde_ai_data`；源码与清单是 bind mount。
-- `scanner` 与 `poller` 共用 `.fde-ai/issues/<编号>/.workflow.lock`，避免同一 issue 并发执行。
-- 国内网络可在 `.env` 设置 `NPM_REGISTRY` / `REPO_URL` 覆盖镜像构建源。
-
 systemd 定时器（宿主机）：
 
 ```sh
@@ -512,7 +654,7 @@ sudo journalctl -u openfde-ai-scan.service -f
 
 详细说明见 [服务器部署](docs/guides/server-deployment.md) 与 [aosp17-ai 容器部署](deploy/server/README.md)。
 
-### 6.10 受控构建（可选，默认关闭）
+### 6.11 受控构建（可选，默认关闭）
 
 仅当 profile `build.enabled=true` 时进入构建通道：
 
@@ -528,7 +670,7 @@ deploy/server/fde-ai-build.sh --issue <编号>
 
 构建结果只是构建证据，不等同于用户验证；构建树不得残留补丁。
 
-### 6.11 测试
+### 6.12 测试
 
 ```sh
 python3 -m unittest discover -s tests -p "test_*.py"
@@ -536,7 +678,7 @@ python3 -m unittest discover -s tests -p "test_*.py"
 
 当前基线 87 个测试全部通过。
 
-### 6.12 知识沉淀（可选）
+### 6.13 知识沉淀（可选）
 
 ```text
 /skill:propose-knowledge ...
