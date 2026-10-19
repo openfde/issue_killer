@@ -35,6 +35,13 @@ while :; do
                 fi
             fi
         fi
+        lock_file=".fde-ai/issues/$issue/.workflow.lock"
+        exec 9>"$lock_file"
+        if ! flock -n 9; then
+            echo "[$(date -u +%FT%TZ)] issue=$issue workflow busy; skip this cycle" >> "$LOG"
+            exec 9>&-
+            continue
+        fi
         seen_file=".fde-ai/issues/$issue/input/replies-seen.json"
         seen="$(python3 -c "import json;print(json.load(open('$seen_file')).get('last_comment_count',0))" 2>/dev/null || echo 0)"
         current="$(gh api "repos/$REPO/issues/$issue" --jq .comments 2>/dev/null || echo "$seen")"
@@ -54,6 +61,7 @@ while :; do
                     ;;
             esac
         fi
+        exec 9>&-
     done
     sleep "$INTERVAL"
 done

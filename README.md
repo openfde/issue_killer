@@ -4,6 +4,31 @@
 
 > 全流程以“未验证建议”为边界：不修改只读源码树、不自动合入 PR、不关闭 issue；所有补丁、PR 与结论均标注 `not_run` / 未验证，由开发人员审阅与验证。
 
+## 快速开始
+
+**交互式（推荐，本机/已有源码树）**
+
+```sh
+git clone git@src.ift.run:ai-apps/fde-ai-assistant.git
+cd fde-ai-assistant
+# 准备 fde-manifests/ 与 fde-sources/（见第 3 节）
+gh auth login -h github.com
+export DEEPSEEK_API_KEY='...'
+pi
+```
+
+```text
+/skill:run-issue-workflow 使用 profiles/openfde/profile.json 分析问题 <编号>
+```
+
+**Docker 一键（Linux + Docker Compose，不需要 AOSP 构建）**
+
+```sh
+cp deploy/server/env.example .env    # 填 GH_TOKEN / DEEPSEEK_API_KEY
+./deploy/docker/up.sh                # 首次自动同步所需源码模块
+docker compose exec scanner pi       # 等 sources-sync 完成后交互式使用
+```
+
 ## 目录
 
 - [1. 能力与边界](#1-能力与边界)
@@ -114,6 +139,8 @@ cd ..
 ```
 
 源码树必须保持只读。工作流会在 `analysis/sources.json` 记录每个组件的精确 commit 与哈希。
+
+Docker 一键部署时无需手工准备：首次启动的 `sources-sync` 会按 `FDE_SOURCE_MODULES`（默认 `art build device external frameworks hardware openfde-sdk packages prebuilts system`）执行 `repo init/sync`；如果 `fde-sources/` 已有内容且没有 `.repo`，会被视为外部准备好的树并原样复用。
 
 ### 3.4 构建树：fde-build（可选）
 
@@ -388,17 +415,26 @@ python3 automation/openfde_ai_server.py --workspace "$PWD" \
   --config config/openfde-ai-server.json requeue --issue <编号>
 ```
 
-Docker（可选，服务器批处理）：
+Docker 一键（无 AOSP 构建，Linux 服务器）：
 
 ```sh
-export GH_TOKEN=... DEEPSEEK_API_KEY=...
-cp config/openfde-ai-server.example.json config/openfde-ai-server.json
-docker compose up -d --build scanner
-docker compose logs -f scanner
-docker compose down        # 不要用 down -v，会丢队列/工件
+cp deploy/server/env.example .env     # 填 GH_TOKEN / DEEPSEEK_API_KEY
+./deploy/docker/up.sh                 # 检查 → 初始化配置 → 构建 → 启动
+docker compose logs -f sources-sync   # 首次按模块子集 repo sync
+docker compose logs -f scanner poller
+docker compose exec scanner pi        # 交互式 Pi（也可用 shell 服务）
+docker compose --profile tools up -d shell
+docker compose exec shell pi
+FORCE_SYNC=1 ./deploy/docker/up.sh    # 模块列表变化后重新同步
+docker compose down                   # 不要用 down -v
 ```
 
-`compose.yaml` 以只读方式挂载 `fde-manifests/` 与 `fde-sources/`（使用 `sources.mode=local_tree` 时必须存在），队列、日志与工件保存在 Docker 卷中。
+- `sources-sync`（一次性）：首次按 `FDE_SOURCE_MODULES`（默认 `art build device external frameworks hardware openfde-sdk packages prebuilts system`）执行 `repo init/sync`；已有且无 `.repo` 的源码树会被原样复用。
+- `scanner`：定时扫描 + worker；`poller`：5 分钟回复轮询；`shell`：交互式 Pi（profile `tools`）。
+- `sources-sync` 以 root 写入源码并 `chmod -R a+rX`；`scanner`/`poller`/`shell` 以镜像内 `agent`（UID 1000）只读访问源码。
+- 队列/工件在命名卷 `openfde_ai_state`/`openfde_ai_data`；源码与清单是 bind mount。
+- `scanner` 与 `poller` 共用 `.fde-ai/issues/<编号>/.workflow.lock`，避免同一 issue 并发执行。
+- 国内网络可在 `.env` 设置 `NPM_REGISTRY` / `REPO_URL` 覆盖镜像构建源。
 
 systemd 定时器（宿主机）：
 
@@ -434,7 +470,7 @@ deploy/server/fde-ai-build.sh --issue <编号>
 python3 -m unittest discover -s tests -p "test_*.py"
 ```
 
-当前基线 79 个测试全部通过。
+当前基线 85 个测试全部通过。
 
 ### 6.12 知识沉淀（可选）
 
@@ -519,6 +555,7 @@ python3 -m unittest discover -s tests -p "test_*.py"
 │   ├── enrich-issue.sh           # 手动整理 issue
 │   ├── reply-poll.sh             # 等待态回复轮询
 │   ├── run-scan-loop.sh          # 容器扫描循环
+│   ├── docker/                   # 一键启动与源码子集同步
 │   ├── server/                   # 容器与受控构建助手
 │   └── systemd/                  # 宿主机定时器
 ├── docs/                         # 指南与架构文档
@@ -574,6 +611,34 @@ nohup bash deploy/reply-poll.sh >>/dev/null 2>&1 &
 tail -f data/logs/reply-poll.log
 ```
 
+**Docker 首次启动长时间停在 `sources-sync`**
+
+首次需要按模块子集 `repo sync`（默认 10 个模块），耗时取决于网络与磁盘：
+
+```sh
+docker compose logs -f sources-sync
+# 调整镜像/分支/模块
+FDE_MANIFEST_URL=... FDE_MANIFEST_BRANCH=... FDE_SOURCE_MODULES="..." ./deploy/docker/up.sh
+FORCE_SYNC=1 ./deploy/docker/up.sh     # 忽略已有 marker，强制重同步
+```
+
+已有源码树（非空且无 `.repo`）会被原样复用，不会覆盖。
+
+**Docker 内交互 Pi**
+
+```sh
+docker compose exec scanner pi
+# 或独立 shell（不影响 scanner/poller）
+docker compose --profile tools up -d shell
+docker compose exec shell pi
+```
+
+技能更新后必须退出容器内 Pi 并重新 `exec`（新进程），不要依赖旧会话。
+
+**Docker 源码/清单权限**
+
+`sources-sync` 以 root 写入并执行 `chmod -R a+rX`；`scanner`/`poller`/`shell` 以 UID 1000 只读访问。若宿主目录由其他属主创建且不可读，请调整目录权限后重新 `up.sh`。
+
 **Windows 下 `.pi/skills` 符号链接异常**
 
 推荐在 Linux（或 WSL2/虚拟机）中运行；Windows 上 junction 与 Git symlink 的识别差异会导致部分测试失败。
@@ -590,6 +655,7 @@ pi --version
 ## 10. 文档索引
 
 - [Pi 使用指南](docs/guides/pi-usage.md)：交互命令、分流、回复闭环；
+- [Docker 部署](docs/guides/docker-deployment.md)：一键启动、源码子集同步、容器内交互；
 - [工作流架构](docs/architecture/workflow.md)：状态机、置信度分流、安全边界；
 - [取证采集](docs/architecture/intake.md)：A/B/C/D 采集模式与体积约束；
 - [组件归属](docs/architecture/component-attribution.md)：三层归属与人工回退；

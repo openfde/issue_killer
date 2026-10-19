@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import fcntl
 import json
 import shlex
 import sqlite3
@@ -250,7 +251,44 @@ def artifact_state(root: Path, profile: dict[str, Any], issue_number: int) -> st
     return state
 
 
+def workflow_lock_path(root: Path, profile: dict[str, Any], issue_number: int) -> Path:
+    layout = profile.get("artifacts", {}).get("issue_layout", {})
+    issue_root = layout.get("root")
+    if not isinstance(issue_root, str) or "{issue_number}" not in issue_root:
+        raise ValueError("profile lacks artifacts.issue_layout.root")
+    return resolve_path(root, issue_root.format(issue_number=issue_number)) / ".workflow.lock"
+
+
 def process_claim(root: Path, config: dict[str, Any], profile: dict[str, Any], store: QueueStore, claimed: dict[str, Any], *, runner: Runner = subprocess.run) -> tuple[int, Path, str | None]:
+    """Run one issue workflow while holding the cross-process per-issue lock."""
+    lock_path = workflow_lock_path(root, profile, claimed["issue_number"])
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    handle = lock_path.open("a", encoding="utf-8")
+    try:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        handle.close()
+        data_root = resolve_path(root, config["data_root"])
+        message = "workflow busy: another process is handling this issue"
+        log = write_worker_log(data_root, claimed["issue_number"], claimed["revision"], message + "\n")
+        store.finish(
+            claimed["issue_number"],
+            claimed["revision"],
+            exit_code=0,
+            terminal=False,
+            retry_limit=int(config["worker"]["retry_limit"]),
+            worker_log=str(log.relative_to(root)),
+            error=message,
+        )
+        return 0, log, message
+    try:
+        return _process_claim(root, config, profile, store, claimed, runner=runner)
+    finally:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+        handle.close()
+
+
+def _process_claim(root: Path, config: dict[str, Any], profile: dict[str, Any], store: QueueStore, claimed: dict[str, Any], *, runner: Runner = subprocess.run) -> tuple[int, Path, str | None]:
     maximum = int(config["worker"].get("max_atomic_steps_per_issue", 16))
     if maximum < 1:
         raise ValueError("max_atomic_steps_per_issue must be positive")

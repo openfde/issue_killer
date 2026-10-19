@@ -7,6 +7,8 @@ fde-manifests/
 
 # 部署专用配置，示例配置仍受版本控制
 config/openfde-ai-server.json
+.env
+.env.*
 
 # Python 可再生缓存
 __pycache__/

@@ -9,8 +9,13 @@ class DockerDeploymentTests(unittest.TestCase):
         dockerfile = (root / "Dockerfile").read_text(encoding="utf-8")
 
         self.assertIn("scanner:", compose)
+        self.assertIn("poller:", compose)
+        self.assertIn("sources-sync:", compose)
+        self.assertIn("shell:", compose)
+        self.assertIn("service_completed_successfully", compose)
         self.assertIn("restart: unless-stopped", compose)
         self.assertIn("SCAN_INTERVAL_SECONDS", compose)
+        self.assertIn("REPLY_POLL_SECONDS", compose)
         self.assertIn("/usr/local/bin/openfde-scan-loop", compose)
         self.assertIn("read_only: true", compose)
         self.assertIn("HOME: /tmp", compose)
@@ -18,6 +23,7 @@ class DockerDeploymentTests(unittest.TestCase):
         self.assertIn("DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:?", compose)
         self.assertIn("/workspace/.fde-ai", compose)
         self.assertIn("/workspace/data", compose)
+        self.assertIn("fde-sources", compose)
         self.assertIn("COPY deploy/run-scan-loop.sh /usr/local/bin/openfde-scan-loop", dockerfile)
 
     def test_scan_loop_has_a_bounded_interval_and_no_docker_systemd_timer(self):

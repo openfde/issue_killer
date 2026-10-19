@@ -1,5 +1,7 @@
 # 服务器部署（aosp17-ai 容器）
 
+> 不需要构建 AOSP 时，请使用根目录的一键 Docker 方案（[README](../../README.md) / [Docker 部署](../../docs/guides/docker-deployment.md)）。本目录用于需要 AOSP 构建工具链与受控构建的服务器容器。
+
 本目录提供在服务器（rootless docker）上构建并运行 `aosp17-ai` 容器的脚本。该容器把本仓库与本地 AOSP 源码树、构建输出组合在一起，负责 Issue 分析、受控构建与产物收集。
 
 ## 组成

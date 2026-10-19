@@ -1,22 +1,55 @@
+x-app: &app
+  build:
+    context: .
+    args:
+      NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmjs.org}
+      REPO_URL: ${REPO_URL:-https://storage.googleapis.com/git-repo-downloads/repo}
+  image: openfde-ai-assistant:pi
+  init: true
+
 services:
+  sources-sync:
+    <<: *app
+    restart: "no"
+    # 以 root 写入源码/清单 bind mount；scanner/poller 以 agent(1000) 只读访问。
+    user: "0:0"
+    environment:
+      HOME: /tmp
+      FDE_MANIFEST_URL: ${FDE_MANIFEST_URL:-https://src.ift.run/openfde17/fde-manifests}
+      FDE_MANIFEST_BRANCH: ${FDE_MANIFEST_BRANCH:-fde_17}
+      FDE_SOURCE_MODULES: ${FDE_SOURCE_MODULES:-art build device external frameworks hardware openfde-sdk packages prebuilts system}
+      FDE_SYNC_JOBS: ${FDE_SYNC_JOBS:-8}
+      FORCE_SYNC: ${FORCE_SYNC:-0}
+    volumes:
+      - type: bind
+        source: ./fde-sources
+        target: /workspace/fde-sources
+      - type: bind
+        source: ./fde-manifests
+        target: /workspace/fde-manifests
+    command: ["bash", "deploy/docker/sync-sources.sh"]
+
   scanner:
-    build:
-      context: .
-    image: openfde-ai-assistant:pi
-    init: true
+    <<: *app
     restart: unless-stopped
     read_only: true
     tmpfs:
       - /tmp:rw,nosuid,nodev,noexec,mode=1777
+    depends_on:
+      sources-sync:
+        condition: service_completed_successfully
     environment:
       HOME: /tmp
+      PI_CODING_AGENT_DIR: /tmp/pi-agent
+      PI_TELEMETRY: "0"
       GH_TOKEN: ${GH_TOKEN:?GH_TOKEN must be set in the Docker launcher environment}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:?DEEPSEEK_API_KEY must be set in the Docker launcher environment}
+      PI_BASE_URL: ${PI_BASE_URL:-}
       SCAN_INTERVAL_SECONDS: ${SCAN_INTERVAL_SECONDS:-1800}
     volumes:
       - type: bind
-        source: ./config/openfde-ai-server.json
-        target: /workspace/config/openfde-ai-server.json
+        source: ./config
+        target: /workspace/config
         read_only: true
       - type: bind
         source: ./fde-manifests
@@ -34,6 +67,74 @@ services:
         target: /workspace/data
     command:
       - /usr/local/bin/openfde-scan-loop
+
+  poller:
+    <<: *app
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,noexec,mode=1777
+    depends_on:
+      sources-sync:
+        condition: service_completed_successfully
+    environment:
+      HOME: /tmp
+      PI_CODING_AGENT_DIR: /tmp/pi-agent
+      PI_TELEMETRY: "0"
+      GH_TOKEN: ${GH_TOKEN:?GH_TOKEN must be set in the Docker launcher environment}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:?DEEPSEEK_API_KEY must be set in the Docker launcher environment}
+      PI_BASE_URL: ${PI_BASE_URL:-}
+      REPLY_POLL_SECONDS: ${REPLY_POLL_SECONDS:-300}
+    volumes:
+      - type: bind
+        source: ./fde-manifests
+        target: /workspace/fde-manifests
+        read_only: true
+      - type: bind
+        source: ./fde-sources
+        target: /workspace/fde-sources
+        read_only: true
+      - type: volume
+        source: openfde_ai_state
+        target: /workspace/.fde-ai
+      - type: volume
+        source: openfde_ai_data
+        target: /workspace/data
+    command: ["bash", "deploy/reply-poll.sh"]
+
+  shell:
+    <<: *app
+    profiles: ["tools"]
+    restart: "no"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,noexec,mode=1777
+    depends_on:
+      sources-sync:
+        condition: service_completed_successfully
+    environment:
+      HOME: /tmp
+      PI_CODING_AGENT_DIR: /tmp/pi-agent
+      PI_TELEMETRY: "0"
+      GH_TOKEN: ${GH_TOKEN:?GH_TOKEN must be set in the Docker launcher environment}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:?DEEPSEEK_API_KEY must be set in the Docker launcher environment}
+      PI_BASE_URL: ${PI_BASE_URL:-}
+    volumes:
+      - type: bind
+        source: ./fde-manifests
+        target: /workspace/fde-manifests
+        read_only: true
+      - type: bind
+        source: ./fde-sources
+        target: /workspace/fde-sources
+        read_only: true
+      - type: volume
+        source: openfde_ai_state
+        target: /workspace/.fde-ai
+      - type: volume
+        source: openfde_ai_data
+        target: /workspace/data
+    command: ["sleep", "infinity"]
 
 volumes:
   openfde_ai_state:

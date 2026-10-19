@@ -3,18 +3,22 @@ from pathlib import Path
 
 
 class ContainerTests(unittest.TestCase):
-    def test_clean_test_container_contract(self):
+    def test_runtime_image_contract(self):
         root = Path(__file__).parents[1]
         dockerfile = (root / "Dockerfile").read_text(encoding="utf-8")
         ignored = (root / ".dockerignore").read_text(encoding="utf-8")
 
-        self.assertIn("python:3.11-slim-bookworm", dockerfile)
-        self.assertIn("git gh ca-certificates", dockerfile)
-        self.assertIn("PYTHONDONTWRITEBYTECODE=1", dockerfile)
-        self.assertIn("python", dockerfile)
-        self.assertIn("unittest", dockerfile)
-        for value in (".git/", "fde-manifests/", "sources/", ".fde-ai/", "data/"):
-            self.assertIn(value, ignored)
+        for value in (
+            "node:24-bookworm-slim",
+            "git gh ca-certificates",
+            "ripgrep",
+            "repo",
+            "PYTHONDONTWRITEBYTECODE=1",
+            "openfde-scan-loop",
+        ):
+            self.assertIn(value, dockerfile, value)
+        for value in (".git/", "fde-manifests/", "fde-sources/", "sources/", ".fde-ai/", "data/"):
+            self.assertIn(value, ignored, value)
 
 
 if __name__ == "__main__":
