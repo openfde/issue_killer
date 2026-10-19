@@ -52,6 +52,13 @@ docker exec -it openfde-ai pi
 ./deploy/docker/pi.sh        # 等价
 ```
 
+退出：
+
+- `pi` 内输入 `/quit` 或 `/exit`（也可 `Ctrl+D`）；
+- 回到容器 shell 后输入 `exit`（或 `Ctrl+D`）返回宿主机；
+- 直接 `docker exec -it openfde-ai pi` 时，退出 Pi 即回到宿主机；
+- 退出 `exec` 不会停止 scanner/poller；停止服务用 `docker compose down`。
+
 独立 shell（不影响 scanner/poller）：
 
 ```sh
