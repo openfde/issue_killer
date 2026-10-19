@@ -94,6 +94,8 @@ python3 automation/openfde_ai_server.py \
 
 采集完成后助手自动生成 `issue-draft.md`（标题含系统版本号，正文+哈希，内网地址不外泄），并在输出末尾附本机 scp 拉取附件的命令：在 GitHub 新建 issue，粘贴草稿正文、拖入 zip 与截图即可，助手不代提 issue、不代发。
 
+**最简 issue 自动整理（推荐）**：也可以只提交一句 `偶现…，有 bugreport` 并附上文件；轮询会在 3 分钟内自动把该 issue 整理为标准取证格式（标题带版本号、时间线只写范围、复现步骤标注“推测/未确认”、保留原始描述），见[取证采集](../architecture/intake.md)。偶现问题还可选 D 模式（事后证据：不连设备、只校验打包已有 bugreport）。
+
 全程只读：禁止 root、禁止 `logcat -c`、禁止安装/卸载/改设置。
 
 ## 求助与验证闭环

@@ -27,6 +27,22 @@ class IntakeTests(unittest.TestCase):
             self.assertFalse((ROOT / "skills" / name).exists(), name)
         self.assertFalse((ROOT / "profiles/openfde/intake-templates").exists())
 
+    def test_intake_supports_post_hoc_evidence_and_issue_enrichment(self):
+        skill = (ROOT / "skills/collect-device-evidence/SKILL.md").read_text(encoding="utf-8")
+        for value in ("事后证据", "推测", "时间线", "下次偶现采集建议"):
+            self.assertIn(value, skill, value)
+
+        enrich = (ROOT / "skills/enrich-issue-intake/SKILL.md").read_text(encoding="utf-8")
+        for value in ("openfde-ai:intake", "时间线（事后补抓）", "复现步骤（推测，未确认）", "原始描述", "gh issue edit"):
+            self.assertIn(value, enrich, value)
+
+        profile = json.loads((ROOT / "profiles/openfde/profile.json").read_text(encoding="utf-8"))
+        self.assertEqual(profile["publication"]["issue_enrichment"], "auto")
+
+        watcher = (ROOT / "deploy/intake-watch.sh").read_text(encoding="utf-8")
+        for value in ("enrich-issue-intake", "watch-state.json", "user-attachments"):
+            self.assertIn(value, watcher, value)
+
     def test_intake_documentation_exists_and_links_from_the_index(self):
         doc = ROOT / "docs/architecture/intake.md"
         self.assertTrue(doc.is_file())
