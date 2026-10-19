@@ -10,7 +10,7 @@ ROOT = Path(__file__).parents[1]
 
 class DockerOneClickTests(unittest.TestCase):
     def test_one_click_assets_exist(self):
-        for name in ("up.sh", "sync-sources.sh", "select-sources.py", "github-sources.tsv"):
+        for name in ("up.sh", "pi.sh", "sync-sources.sh", "select-sources.py", "github-sources.tsv"):
             self.assertTrue((ROOT / "deploy/docker" / name).is_file(), name)
 
     def test_up_script_checks_prerequisites_and_starts_compose(self):
@@ -19,13 +19,24 @@ class DockerOneClickTests(unittest.TestCase):
         for value in (
             "GH_TOKEN",
             "DEEPSEEK_API_KEY",
+            "OPENAI_API_KEY",
+            "PI_PROVIDER",
+            "load_env",
+            "cp \"$ROOT/deploy/server/env.example\"",
             "docker compose build",
             "docker compose up -d",
             "config/openfde-ai-server.json",
             "fde-manifests",
             "fde-sources",
             "--force-sync",
+            "docker exec -it openfde-ai",
         ):
+            self.assertIn(value, content, value)
+
+    def test_pi_wrapper_uses_the_fixed_container_name(self):
+        content = (ROOT / "deploy/docker/pi.sh").read_text(encoding="utf-8")
+
+        for value in ("docker exec -it openfde-ai pi", "openfde-ai"):
             self.assertIn(value, content, value)
 
     def test_sync_script_uses_repo_and_only_selected_modules(self):
@@ -94,7 +105,13 @@ class DockerOneClickTests(unittest.TestCase):
     def test_entrypoint_injects_model_settings_and_git_auth(self):
         content = (ROOT / "deploy/docker-entrypoint.sh").read_text(encoding="utf-8")
 
-        for value in ("/opt/pi-agent-template/settings.json", "safe.directory", "gh auth setup-git"):
+        for value in (
+            "PI_PROVIDER",
+            "PI_MODEL",
+            "settings.json",
+            "safe.directory",
+            "gh auth setup-git",
+        ):
             self.assertIn(value, content, value)
 
     def test_scanner_and_poller_share_the_per_issue_lock(self):

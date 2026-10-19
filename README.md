@@ -14,6 +14,7 @@ cd fde-ai-assistant
 # 准备 fde-manifests/ 与 fde-sources/（见第 3 节）
 gh auth login -h github.com
 export DEEPSEEK_API_KEY='...'
+# 其他模型：export PI_PROVIDER=... PI_MODEL=... 及对应 *_API_KEY
 pi
 ```
 
@@ -24,9 +25,10 @@ pi
 **Docker 一键（Linux + Docker Compose，不需要 AOSP 构建）**
 
 ```sh
-cp deploy/server/env.example .env    # 填 GH_TOKEN / DEEPSEEK_API_KEY
-./deploy/docker/up.sh                # 首次自动同步所需源码模块
-docker compose exec scanner pi       # 等 sources-sync 完成后交互式使用
+export GH_TOKEN='...'
+export DEEPSEEK_API_KEY='...'        # 其他模型：PI_PROVIDER/PI_MODEL + 对应 key，可加 PI_BASE_URL
+./deploy/docker/up.sh                # 自动生成 .env；首次同步源码模块
+docker exec -it openfde-ai bash      # 进入容器后运行 pi
 ```
 
 ## 目录
@@ -200,7 +202,13 @@ Node 24 + Pi 0.84.2 已验证；其他版本请先运行 `pi --version` 与一�
 
 ```sh
 export GH_TOKEN='<GitHub token>'                 # 无人值守/容器必需；交互式也可用 gh auth login
-export DEEPSEEK_API_KEY='<DeepSeek token>'        # 默认模型提供方
+export DEEPSEEK_API_KEY='<DeepSeek token>'        # 默认模型；其他模型见下
+export PI_PROVIDER='deepseek'                     # 可选：openai / anthropic / google ...
+export PI_MODEL='deepseek-flash'
+# export PI_BASE_URL='https://...'                # OpenAI 兼容网关
+# export OPENAI_API_KEY='...'                     # 按 PI_PROVIDER 选择
+# export ANTHROPIC_API_KEY='...'
+# export GEMINI_API_KEY='...'                     # 或 GOOGLE_API_KEY
 export PI_CODING_AGENT_DIR="$HOME/pi-agent"
 export PI_TELEMETRY=0
 ```
@@ -211,8 +219,8 @@ export PI_TELEMETRY=0
 
 ```sh
 cd fde-ai-assistant
-chmod +x deploy/*.sh deploy/server/*.sh
-python3 -m unittest discover -s tests -p "test_*.py"   # 当前应为 86 个测试全部通过
+chmod +x deploy/*.sh deploy/server/*.sh deploy/docker/*.sh
+python3 -m unittest discover -s tests -p "test_*.py"   # 当前应为 87 个测试全部通过
 pi --version
 gh auth status
 ls .pi/skills | head                                # 34 个 skill 符号链接
@@ -418,16 +426,25 @@ python3 automation/openfde_ai_server.py --workspace "$PWD" \
 Docker 一键（无 AOSP 构建，Linux 服务器）：
 
 ```sh
-cp deploy/server/env.example .env     # 填 GH_TOKEN / DEEPSEEK_API_KEY
-./deploy/docker/up.sh                 # 检查 → 初始化配置 → 构建 → 启动
-docker compose logs -f sources-sync   # 首次按模块子集 repo sync
-docker compose logs -f scanner poller
-docker compose exec scanner pi        # 交互式 Pi（也可用 shell 服务）
-docker compose --profile tools up -d shell
-docker compose exec shell pi
-FORCE_SYNC=1 ./deploy/docker/up.sh    # 模块列表变化后重新同步
-docker compose down                   # 不要用 down -v
+export GH_TOKEN='...'
+export DEEPSEEK_API_KEY='...'
+# 切换模型示例：
+# export PI_PROVIDER=openai PI_MODEL=<model> OPENAI_API_KEY='...'
+# export PI_BASE_URL=https://...          # OpenAI 兼容网关
+./deploy/docker/up.sh                     # 自动生成 .env；首次同步源码
+
+docker exec -it openfde-ai bash           # 进入后运行 pi
+# 或直接：docker exec -it openfde-ai pi
+# 或：./deploy/docker/pi.sh
+
+docker logs -f openfde-ai-sources         # 首次源码同步
+docker logs -f openfde-ai                 # scanner
+docker logs -f openfde-ai-poller          # 回复轮询
+FORCE_SYNC=1 ./deploy/docker/up.sh        # 重新同步
+docker compose down                       # 不要用 down -v
 ```
+
+- 模型：`PI_PROVIDER`/`PI_MODEL` 写入 Pi settings（默认 `deepseek/deepseek-flash`）；其他提供方使用对应的 `*_API_KEY`，`PI_BASE_URL` 可指向 OpenAI 兼容网关。
 
 - `sources-sync`（一次性）：默认按 GitHub 镜像（48 个仓库，`fde_17`）同步，并按 `FDE_SOURCE_MODULES`（默认 `art build device external frameworks hardware openfde-sdk packages prebuilts system`）过滤；已有仓库复用。`FDE_SYNC_MODE=repo` 改用 Android `repo init/sync`，`none` 跳过（使用已准备好的树）。
 - `scanner`：定时扫描 + worker；`poller`：5 分钟回复轮询；`shell`：交互式 Pi（profile `tools`）。
@@ -470,7 +487,7 @@ deploy/server/fde-ai-build.sh --issue <编号>
 python3 -m unittest discover -s tests -p "test_*.py"
 ```
 
-当前基线 86 个测试全部通过。
+当前基线 87 个测试全部通过。
 
 ### 6.12 知识沉淀（可选）
 
@@ -627,13 +644,17 @@ FORCE_SYNC=1 ./deploy/docker/up.sh     # 忽略已有 marker，强制重同步
 **Docker 内交互 Pi**
 
 ```sh
-docker compose exec scanner pi
-# 或独立 shell（不影响 scanner/poller）
+docker logs -f openfde-ai-sources
+docker exec -it openfde-ai bash   # 然后运行 pi
+# 或：docker exec -it openfde-ai pi
+# 或：./deploy/docker/pi.sh
+
+# 独立 shell（不影响 scanner/poller）：
 docker compose --profile tools up -d shell
-docker compose exec shell pi
+docker exec -it openfde-ai-shell pi
 ```
 
-技能更新后必须退出容器内 Pi 并重新 `exec`（新进程），不要依赖旧会话。
+技能更新后必须退出容器内 Pi 并重新进入（新进程），不要依赖旧会话。
 
 **Docker 源码/清单权限**
 

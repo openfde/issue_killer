@@ -9,8 +9,12 @@ if [ -d /run/secrets/pi-agent ]; then
     cp -a /run/secrets/pi-agent/. "$pi_runtime_dir/"
 fi
 
-if [ ! -f "$pi_runtime_dir/settings.json" ] && [ -f /opt/pi-agent-template/settings.json ]; then
-    cp /opt/pi-agent-template/settings.json "$pi_runtime_dir/settings.json"
+if [ ! -f "$pi_runtime_dir/settings.json" ]; then
+    if python3 -c 'import json, os, sys; json.dump({"defaultProvider": os.environ.get("PI_PROVIDER", "deepseek"), "defaultModel": os.environ.get("PI_MODEL", "deepseek-flash")}, sys.stdout, indent=2)' > "$pi_runtime_dir/settings.json" 2>/dev/null; then
+        :
+    elif [ -f /opt/pi-agent-template/settings.json ]; then
+        cp /opt/pi-agent-template/settings.json "$pi_runtime_dir/settings.json"
+    fi
 fi
 
 export PI_CODING_AGENT_DIR="$pi_runtime_dir"

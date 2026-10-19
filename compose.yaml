@@ -10,6 +10,7 @@ x-app: &app
 services:
   sources-sync:
     <<: *app
+    container_name: openfde-ai-sources
     restart: "no"
     # 以 root 写入源码/清单 bind mount；scanner/poller 以 agent(1000) 只读访问。
     user: "0:0"
@@ -34,6 +35,9 @@ services:
 
   scanner:
     <<: *app
+    env_file:
+      - .env
+    container_name: openfde-ai
     restart: unless-stopped
     read_only: true
     tmpfs:
@@ -46,8 +50,14 @@ services:
       PI_CODING_AGENT_DIR: /tmp/pi-agent
       PI_TELEMETRY: "0"
       GH_TOKEN: ${GH_TOKEN:?GH_TOKEN must be set in the Docker launcher environment}
-      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:?DEEPSEEK_API_KEY must be set in the Docker launcher environment}
+      PI_PROVIDER: ${PI_PROVIDER:-deepseek}
+      PI_MODEL: ${PI_MODEL:-deepseek-flash}
       PI_BASE_URL: ${PI_BASE_URL:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
       SCAN_INTERVAL_SECONDS: ${SCAN_INTERVAL_SECONDS:-1800}
     volumes:
       - type: bind
@@ -73,6 +83,9 @@ services:
 
   poller:
     <<: *app
+    env_file:
+      - .env
+    container_name: openfde-ai-poller
     restart: unless-stopped
     read_only: true
     tmpfs:
@@ -85,8 +98,14 @@ services:
       PI_CODING_AGENT_DIR: /tmp/pi-agent
       PI_TELEMETRY: "0"
       GH_TOKEN: ${GH_TOKEN:?GH_TOKEN must be set in the Docker launcher environment}
-      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:?DEEPSEEK_API_KEY must be set in the Docker launcher environment}
+      PI_PROVIDER: ${PI_PROVIDER:-deepseek}
+      PI_MODEL: ${PI_MODEL:-deepseek-flash}
       PI_BASE_URL: ${PI_BASE_URL:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
       REPLY_POLL_SECONDS: ${REPLY_POLL_SECONDS:-300}
     volumes:
       - type: bind
@@ -107,6 +126,9 @@ services:
 
   shell:
     <<: *app
+    env_file:
+      - .env
+    container_name: openfde-ai-shell
     profiles: ["tools"]
     restart: "no"
     read_only: true
@@ -120,8 +142,14 @@ services:
       PI_CODING_AGENT_DIR: /tmp/pi-agent
       PI_TELEMETRY: "0"
       GH_TOKEN: ${GH_TOKEN:?GH_TOKEN must be set in the Docker launcher environment}
-      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:?DEEPSEEK_API_KEY must be set in the Docker launcher environment}
+      PI_PROVIDER: ${PI_PROVIDER:-deepseek}
+      PI_MODEL: ${PI_MODEL:-deepseek-flash}
       PI_BASE_URL: ${PI_BASE_URL:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
     volumes:
       - type: bind
         source: ./fde-manifests
