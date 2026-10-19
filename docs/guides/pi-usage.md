@@ -9,7 +9,7 @@ cd /you/project/path/to/fde-ai-assistant
 pi
 ```
 
-所有 GitHub 读取和评论都由所有智能体共用的 `gh` 命令行工具执行。首次使用前在本机完成 `gh auth login -h github.com`；Docker 部署必须显式传入 `GH_TOKEN`（创建与权限见 [README 4.4](../../README.md#44-github-token-配置ghtoken)）。不要把令牌写入项目配置、问题产物或提示词。
+所有 GitHub 读取和评论都由所有智能体共用的 `gh` 命令行工具执行。首次使用前在本机完成 `gh auth login -h github.com`；Docker 部署必须显式传入 `GH_TOKEN`（创建与权限见 [README 4.2](../../README.md#42-凭据与模型)）。不要把令牌写入项目配置、问题产物或提示词。
 
 本项目选用的项目配置是 `profiles/openfde/profile.json`。它提供仓库、Android repo XML 清单、产物目录和发布策略；它不包含问题内容或凭据。
 

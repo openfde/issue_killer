@@ -2,7 +2,7 @@
 
 当前推荐流程：
 
-- Docker 一键部署：见 [README 6.9](../../README.md#69-docker-一键部署无-aosp-构建推荐)；
+- Docker 一键部署：见 [README 4.3](../../README.md#43-docker-一键部署推荐)；
 - 本机交互式 Pi：见 [Pi 使用指南](pi-usage.md)；
 - 工作流、状态与置信度分流：见 [工作流架构](../architecture/workflow.md)。
 

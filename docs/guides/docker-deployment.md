@@ -1,6 +1,6 @@
 # Docker 容器运维（速查）
 
-完整安装、Docker/Compose 安装、镜像加速、凭据/模型配置、首次启动与验证见 [README 6.9](../../README.md#69-docker-一键部署无-aosp-构建推荐)。本页只列日常容器运维，避免重复安装步骤。
+完整安装、Docker/Compose 安装、镜像加速、凭据/模型配置、首次启动与验证见 [README 4.3](../../README.md#43-docker-一键部署推荐)。本页只列日常容器运维，避免重复安装步骤。
 
 ## 日常命令
 
@@ -58,10 +58,10 @@ docker rmi openfde-ai-assistant:pi   # 可选：删除镜像，下次 up 重新�
 ## 容器侧排障
 
 - `sources-sync` 失败：`docker logs openfde-ai-sources`；默认 GitHub 模式检查 GitHub 网络，repo 模式检查 `FDE_MANIFEST_URL`/`FDE_MANIFEST_BRANCH`；可用 `FDE_SOURCE_MODULES` 缩小范围，或 `FDE_SYNC_MODE=none` 使用已有源码；
-- `gh` 未认证：确认 `GH_TOKEN` 非空并重建容器（见 [README 4.4](../../README.md#44-github-token-配置ghtoken)）；
+- `gh` 未认证：确认 `GH_TOKEN` 非空并重建容器（见 [README 4.2](../../README.md#42-凭据与模型)）；
 - `read:org` 告警：补经典 PAT 的 `read:org` 或 fine-grained Organization Members `Read`，重新授权后重建；
 - 模型不可用：`pi auth check --provider <p> --model <m>`，检查对应 API key / `PI_BASE_URL`；
 - 交互 Pi 仍是旧技能：退出并重新 `docker exec -it openfde-ai pi`（新进程）；
 - 源码权限：确认 bind mount 对 UID 1000 可读，或重跑 `sources-sync` 的 `chmod -R a+rX`。
 
-安装/镜像加速/首次验证等通用问题见 [README 6.9](../../README.md#69-docker-一键部署无-aosp-构建推荐)。
+安装/镜像加速/首次验证等通用问题见 [README 4.3](../../README.md#43-docker-一键部署推荐)。
