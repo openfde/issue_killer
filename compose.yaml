@@ -22,6 +22,10 @@ services:
         source: ./fde-manifests
         target: /workspace/fde-manifests
         read_only: true
+      - type: bind
+        source: ./fde-sources
+        target: /workspace/fde-sources
+        read_only: true
       - type: volume
         source: openfde_ai_state
         target: /workspace/.fde-ai
