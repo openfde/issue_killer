@@ -60,16 +60,31 @@
     "allow_auto_information_requests": true,
     "interaction_comments": "pr_only",
     "analysis_options_comment": "auto",
+    "reproduction_plan_comment": "auto",
+    "debug_pr_comment": "auto",
     "dry_run": true,
     "minimum_confidence": "high",
     "blocked_labels": ["no-ai-reply"]
   },
+  "triage": {
+    "analysis_reply_min_confidence": 50,
+    "auto_pr_min_confidence": 70,
+    "max_deep_analysis_rounds": 2
+  },
   "replies": {
-    "poll_seconds": 180
+    "poll_seconds": 300
   },
   "pull_request": {
     "enabled": true,
     "provider": "github",
     "base_branch": "fde_17"
+  },
+  "debug_pull_request": {
+    "enabled": true,
+    "provider": "github",
+    "base_branch": "fde_17",
+    "branch_prefix": "ai-debug/",
+    "instrumentation_only": true,
+    "merge": false
   }
 }

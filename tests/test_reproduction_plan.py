@@ -20,6 +20,12 @@ class ReproductionPlanTests(unittest.TestCase):
         usage = (ROOT / "docs/guides/pi-usage.md").read_text(encoding="utf-8")
         self.assertIn("design-reproduction-plan", usage)
 
+    def test_plan_can_be_published_as_a_follow_up_issue_reply(self):
+        content = (ROOT / "skills/design-reproduction-plan/SKILL.md").read_text(encoding="utf-8")
+
+        for value in ("comment/reproduction-plan.md", "openfde-ai:reproduction-plan", "publish-policy-comment"):
+            self.assertIn(value, content, value)
+
 
 if __name__ == "__main__":
     unittest.main()

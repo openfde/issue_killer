@@ -9,6 +9,8 @@ description: 当问题偶现、仅凭代码逻辑无法确认根因时，需要�
 
 产物：`.fde-ai/issues/<issue号>/analysis/reproduction-plan.md`（可附 `scripts/` 下可复制脚本，放在 issue 目录内并说明用途）。不得在 `.fde-ai/runs/` 创建产物。
 
+当开发者从分析回复中选择 **D（复现与验证方案）** 时，除上述产物外，同时生成 `.fde-ai/issues/<issue号>/comment/reproduction-plan.md`：正文为可执行的完整方案（触发方案、观测点、稳定复现判定、修复后验证判定、根因确认实验、执行说明），全部标注 `not_run`，请开发人员执行后回传日志/结果；文末 marker `<!-- openfde-ai:reproduction-plan issue=<编号> revision=<版本> -->`。发布由 `publish-policy-comment` 完成（`publication.reproduction_plan_comment`），发布后保持 `awaiting_direction`。
+
 方案必须包含：
 
 1. **触发方案（按侵入程度分档）**
@@ -21,6 +23,6 @@ description: 当问题偶现、仅凭代码逻辑无法确认根因时，需要�
 5. **根因确认实验（关键）**：列出 2~3 个可区分的假设与对应实验（如“仅当 X 条件成立才复现”“禁用 Y 后不复现”），逐条说明实验结果对假设的支持/排除关系，确保代码逻辑无法完全确认时仍能通过实验定位根因。
 6. **执行说明**：哪些步骤需人工/测试人员执行、预计耗时、设备与版本要求、风险（可能触发更多 crash，但只读日志采集不受影响）。
 
-推进：**保持 `state` 为 `analysis_verified`**（`propose-fix` 仅接受该状态）；在 `state.json` 或会话中注明已生成复现与验证方案，后续 `propose-fix` 应引用其中的验证判定。
+推进：开发者选择 D 时，方案可追加发布到 issue 并保持 `awaiting_direction`（等待开发选择修复路线或回传实验结果）；未选择 D 时仅在会话内展示。`propose-fix` 应引用其中的验证判定。
 
-边界：不得声称已复现或已验证（全部 `not_run`）；不得改源码；不得在设备上执行交互命令；需要构建时只提示开启构建通道；不得发布评论。
+边界：不得声称已复现或已验证（全部 `not_run`）；不得改源码；不得在设备上执行交互命令；需要构建时只提示开启构建通道；不得自行调用 GitHub（发布由 `publish-policy-comment` 完成）。

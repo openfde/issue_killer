@@ -1,17 +1,19 @@
 #!/bin/bash
-# 等待态回复轮询（默认 3 分钟）：
+# 等待态回复轮询（默认 5 分钟）：
 #   - 扫描处于 awaiting_direction / awaiting_verification 的 issue；
-#   - 仅当 GitHub 评论数增加时才调用 sync-github-replies 技能（空闲不消耗模型调用）。
+#   - 仅当 GitHub 评论数增加时才调用 sync-github-replies 技能（空闲不消耗模型调用）；
+#   - awaiting_direction 超过 30 分钟无回复时仅在日志提示，不自动深挖。
 # 用法：从已加载环境变量（GH_TOKEN 等）的登录 shell 启动：
 #   cd ~/fde-ai-assistant && nohup bash deploy/reply-poll.sh >>/dev/null 2>&1 &
 set -u
 cd "$(dirname "$0")/.."
 
-INTERVAL="${REPLY_POLL_SECONDS:-$(python3 -c "import json;print(json.load(open('profiles/openfde/profile.json')).get('replies',{}).get('poll_seconds',180))" 2>/dev/null || echo 180)}"
+INTERVAL="${REPLY_POLL_SECONDS:-$(python3 -c "import json;print(json.load(open('profiles/openfde/profile.json')).get('replies',{}).get('poll_seconds',300))" 2>/dev/null || echo 300)}"
 REPO="$(python3 -c "import json;print(json.load(open('profiles/openfde/profile.json'))['github']['repository'])" 2>/dev/null)"
 LOG=data/logs/reply-poll.log
 mkdir -p data/logs
 echo "[$(date -u +%FT%TZ)] reply-poll started interval=${INTERVAL}s repo=${REPO}" >> "$LOG"
+declare -A WAIT_WARNED
 
 while :; do
     for st in .fde-ai/issues/*/state.json; do
@@ -22,6 +24,17 @@ while :; do
             awaiting_direction|awaiting_verification) ;;
             *) continue ;;
         esac
+        if [ "$state" = "awaiting_direction" ] && [ -z "${WAIT_WARNED[$issue]:-}" ]; then
+            since="$(python3 -c "import json;print(json.load(open('$st')).get('direction_wait_since',''))" 2>/dev/null)"
+            if [ -n "$since" ]; then
+                now="$(date -u +%s)"
+                since_ts="$(date -u -d "$since" +%s 2>/dev/null || echo 0)"
+                if [ "${since_ts:-0}" -gt 0 ] && [ $((now - since_ts)) -ge 1800 ]; then
+                    echo "[$(date -u +%FT%TZ)] issue=$issue awaiting_direction >30min (since=$since)，继续等待" >> "$LOG"
+                    WAIT_WARNED[$issue]=1
+                fi
+            fi
+        fi
         seen_file=".fde-ai/issues/$issue/input/replies-seen.json"
         seen="$(python3 -c "import json;print(json.load(open('$seen_file')).get('last_comment_count',0))" 2>/dev/null || echo 0)"
         current="$(gh api "repos/$REPO/issues/$issue" --jq .comments 2>/dev/null || echo "$seen")"

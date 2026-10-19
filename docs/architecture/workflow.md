@@ -55,25 +55,26 @@ load-project-profile
 → retrieve-knowledge
 → trace-evidence-to-source
 → verify-analysis
-→ 可选 design-reproduction-plan（偶现/根因不确定时：复现与验证方案）
-→ propose-fix
-→ 分支一（根因明确、修复单一）：
-   可选 draft-patch / validate-patch-artifact
-   → 可选 create-fix-pull-request（人工确认；只创建/更新 PR，不合入）
-   → draft-issue-comment → publish-policy-comment（交付/验证征询评论必须立即发布到 issue）
-   → 仅当 build.enabled=true 时 request-build → collect-build-artifacts（构建结果后到时追加更新评论）
-   → awaiting_verification（等待人工自测；sync-github-replies 轮询回复）
-   → confirmed_fixed → archive-case
-→ 分支二（无法立即修复/需开发决策）：
-   draft-analysis-options（完整原因链 + A/B/C 修复选项）
-   → publish-policy-comment（analysis-options；按 publication.analysis_options_comment 发布或留草稿）
-   → awaiting_direction（开发人员选择 A/B/C；sync-github-replies → direction_received）
-   → 按所选路线回到 propose-fix / draft-patch
+→ propose-fix（生成候选方案 + fix_confidence = min(根因, 修复)）
+→ 置信度分流：
+   ├─ ≥70（triage.auto_pr_min_confidence）：
+   │    draft-patch / validate-patch-artifact
+   │    → 可选 create-fix-pull-request（人工确认；只创建/更新 PR，不合入）
+   │    → draft-issue-comment → publish-policy-comment（交付/验证征询评论必须立即发布）
+   │    → 仅当 build.enabled=true 时 request-build → collect-build-artifacts
+   │    → awaiting_verification → confirmed_fixed → archive-case
+   ├─ 50–69（analysis_reply_min_confidence ≤ score < auto_pr_min_confidence）：
+   │    draft-analysis-options（原因链 + A/B/C + D/E/F 选项；D/E 只列不展开）
+   │    → publish-policy-comment（analysis-options）→ awaiting_direction
+   │    → A/B/C → 修复流程；D → 展开复现方案并追加回复；E → 调试插桩 PR；F → 深度分析
+   └─ <50：
+        分析助手深度分析（最多 triage.max_deep_analysis_rounds 轮）
+        → 仍不足则 draft-analysis-options（调查选项）→ awaiting_direction
 ```
 
 构建通道**默认关闭**（`build.enabled=false`，调试 L0-L2 期间不进入）。
 
-分析受阻或耗时超预算（同一目标约 10 分钟无进展）时，`escalate-issue` 发布带 A/B/C 的求助评论并停在 `awaiting_direction`；无法立即修复（根因有未证实环节、需复现实验、多条可行路线或需开发决策）时，`draft-analysis-options` 产出完整原因链 + A/B/C 修复选项并发布（`analysis-options`）等待开发选择，不自行选路线。开发人员的回复由 `sync-github-replies` 按内容宽容解析：选项/方向 → 带方向继续（`direction_received`）；仍有问题+证据 → 新 revision 重新分析；验证通过 → `confirmed_fixed` 收敛归档。issue 关闭始终由人工完成。
+分析受阻或耗时超预算（同一目标约 10 分钟无进展）时，`escalate-issue` 发布带 A/B/C 的求助评论并停在 `awaiting_direction`；`propose-fix` 后按 `fix_confidence` 分流：≥70 修复 PR；50–69 由分析助手发布完整原因链 + A/B/C + D/E/F 选项（`analysis-options`）并等待开发选择，不自行选路线；<50 先深度分析（最多 2 轮），仍不足则发调查选项。开发人员的回复由 `sync-github-replies` 按内容宽容解析：A/B/C → 修复流程；D → 展开复现方案并追加 issue 回复；E → 调试插桩 PR；F → 深度分析；调试日志/仍有问题+证据 → 新 revision 重新分析；验证通过 → `confirmed_fixed` 收敛归档。等待态默认每 5 分钟轮询，无回复保持等待。issue 关闭始终由人工完成。
 
 证据不足、状态校验失败或需要人工信息时，流程进入 `needs_information` 或 `blocked`，而不是猜测根因。开发者新增回复、新日志或用户测试失败会创建新的分析版本，不覆盖旧证据。
 
@@ -84,6 +85,8 @@ load-project-profile
 `sources.mode=local_tree` 时，`cache-provenanced-sources` 在只读本地树中按组件记录精确 commit 与哈希，不克隆、不拉取；其他模式仅获取匹配组件的精确版本，并保持本地副本只读。
 
 补丁建议必须关联已验证的证据、组件、文件、行号和基准提交，且标记为 `not_run`。安装、启动和设备侧测试由用户或 CI 执行；其结果可作为下一版本的证据。补丁经人工在关键节点确认后，可由 `create-fix-pull-request` 在独立工作区应用、推送 `ai/` 分支并以 MR/PR 形式提交（**只创建、不合入主分支**），供开发人员查看、修改与合入；修复跨多个项目时按项目分别创建 PR，并由评论的“修复 PR/MR”段落附上全部链接；**创建或更新后必须立即发布交付/验证征询评论到 issue**。PR 说明与评论落款统一使用“由 AI 修复助手生成”，且不得写出内部产物路径。构建通道默认关闭（`build.enabled=false`）；启用后是补丁的受限验证手段而非修复声明：`manual`（默认）下 `request-build` 只写 `build/build-request.json` 并停在 `build_requested`，人工运行 `deploy/server/fde-ai-build.sh --issue <编号>`；`auto` 下由授权助手执行。助手加锁（`data/build.lock` 与 `.siso_lock` 检查）、临时应用 patch、模块增量构建、记录产物哈希到 `build/build-result.json`，并在任何退出路径回滚补丁；`collect-build-artifacts` 校验后推进到 `artifacts_collected`。
+
+**调试插桩 PR**：仅当开发人员从分析回复选择 E 时，`draft-debug-patch` 生成只加日志/埋点的补丁（不改行为），`create-debug-pull-request` 在 `ai-debug/` 分支创建 PR（**只创建、不合入**），并立即发布 `debug-pr` 评论（插桩点/TAG、采集命令、回传要求、移除方式）。当前构建关闭时由开发自行构建/刷机；回传日志按新证据进入新 revision。调试 PR 不是修复交付，不得要求“验证通过”。
 
 ## GitHub 读取与发布
 

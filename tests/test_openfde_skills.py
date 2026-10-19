@@ -24,6 +24,8 @@ class OpenFdeSkillsTests(unittest.TestCase):
             "create-fix-pull-request",
             "design-reproduction-plan",
             "draft-analysis-options",
+            "draft-debug-patch",
+            "create-debug-pull-request",
             "confirm-component-mapping",
             "escalate-issue",
             "enrich-issue-intake",

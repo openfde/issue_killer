@@ -12,7 +12,7 @@ class InteractionLoopTests(unittest.TestCase):
 
         self.assertEqual(profile["publication"]["interaction_comments"], "pr_only")
         self.assertEqual(profile["publication"]["analysis_options_comment"], "auto")
-        self.assertEqual(profile["replies"]["poll_seconds"], 180)
+        self.assertEqual(profile["replies"]["poll_seconds"], 300)
 
     def test_escalation_skill_publishes_options_and_waits(self):
         content = (ROOT / "skills/escalate-issue/SKILL.md").read_text(encoding="utf-8")
@@ -41,7 +41,7 @@ class InteractionLoopTests(unittest.TestCase):
     def test_reply_poll_script_checks_only_waiting_issues(self):
         script = (ROOT / "deploy/reply-poll.sh").read_text(encoding="utf-8")
 
-        for value in ("awaiting_direction", "awaiting_verification", "180"):
+        for value in ("awaiting_direction", "awaiting_verification", "300"):
             self.assertIn(value, script, value)
 
     def test_description_level_evidence_and_no_collection_option(self):

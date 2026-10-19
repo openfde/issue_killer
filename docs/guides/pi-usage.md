@@ -98,26 +98,44 @@ python3 automation/openfde_ai_server.py \
 
 全程只读：禁止 root、禁止 `logcat -c`、禁止安装/卸载/改设置。
 
-## 复现与验证方案（偶现问题）
+## 置信度分流（分析助手 / 修复助手）
 
-当根因只能由代码推断、无法完全确认时，在根因节点选择“设计复现与验证方案”（`design-reproduction-plan`）。它会产出：
+`propose-fix` 会给出 `fix_confidence`（取根因与修复的较低值，0–100）。分流规则：
+
+| 分数 | 处理 |
+| --- | --- |
+| ≥70 | 修复助手：补丁 → PR → 交付/验证征询评论 → `awaiting_verification` |
+| 50–69 | 分析助手：原因链 + 修复选项 A/B/C + D/E/F 选项 → `awaiting_direction` |
+| <50 | 分析助手深度分析（最多 2 轮）；仍不足则发调查选项 → `awaiting_direction` |
+
+## 原因链与修复选项（50–69）
+
+当修复置信度不足 70（根因存在未证实环节、需要复现实验、多条可行修复路线或改动影响面需要开发决策）时，助手**不自行选路线**，而是产出并发布一条 `analysis-options` issue 回复：
+
+- **结论与置信度**：失效机制 + “修复置信度 xx%（根因 xx / 修复 xx，依据……）”；
+- **问题原因链**：触发条件与前置状态、毫秒级时间线、按时间/调用顺序的完整因果链（每步带证据 ID/日志时间戳与 `文件:行号`）、直接原因、根本原因、放大因素、容错路径为何失效、未证实环节（标注“推断，未证实”与验证实验）、影响面、已排除项；
+- **修复选项 A/B/C**：每项含改动点（`文件:函数`）、机制、优点、缺点与风险、验证方法与判据、工作量、是否需要构建/刷机；推荐项标注“推荐”；
+- **可选证据补强（只列选项，不展开）**：D. 复现与验证方案；E. 调试 PR（插桩）；F. 深入分析（<50 或按需）；
+- **请求决策**：回复 A/B/C/D/E/F；A/B/C 生成补丁/PR，D 展开复现方案并追加 issue 回复，E 创建 `ai-debug/` 插桩 PR，F 继续深度分析。
+
+写作要求：纯技术分析，结论必有依据，禁止套话、情绪化文字与空泛总结。发布由 `publication.analysis_options_comment` 控制（当前 `auto`）；`dry_run=true` 时发布前仍需你在会话中确认。
+
+## 复现与验证方案（选择 D 后）
+
+当根因只能由代码推断、无法完全确认，且你选择 D 时，`design-reproduction-plan` 会生成方案并**追加一条 issue 回复**：
 
 - **稳定复现**：无侵入 adb 循环脚本（如快速切换 dock 缩略图与桌面应用）→ 轻插桩日志 → 需构建的深插桩（断言/trace/perfetto）；
 - **观测点**：目标 crash 签名、`logcat -b crash`、tombstone/dropbox、关键 tag；
 - **判定标准**：N 次运行出现 ≥1 次目标签名即“已复现”；修复后同一脚本 N 次 0 次目标签名 + 错误日志消失即“通过”；
-- **根因确认实验**：列出可区分的假设与实验，说明每个结果支持/排除哪个假设——保证在代码无法确认时仍能通过实验定位根因。
+- **根因确认实验**：列出可区分的假设与实验，说明每个结果支持/排除哪个假设。
 
-方案仅供人工执行（全部 `not_run`），需要构建的插桩会提示开启 `build.enabled=true`。
+方案仅供人工执行（全部 `not_run`），需要构建的插桩会提示开启 `build.enabled=true`；执行后回传日志/结果，按新证据进入新 revision。
 
-## 原因链与修复选项（无法立即修复的 issue）
+## 调试 PR（选择 E 后）
 
-当问题无法立即修复（根因存在未证实环节、需要复现实验、多条可行修复路线或改动影响面需要开发决策）时，助手**不自行选路线**，而是产出并发布一条 `analysis-options` issue 回复：
-
-- **问题原因链**：触发条件与前置状态、毫秒级时间线、按时间/调用顺序的完整因果链（每步带证据 ID/日志时间戳与 `文件:行号`）、直接原因、根本原因、放大因素、容错路径为何失效、未证实环节（标注“推断，未证实”与验证实验）、影响面、已排除项；
-- **修复选项 A/B/C**：每项含改动点（`文件:函数`）、机制、优点、缺点与风险、验证方法与判据、工作量、是否需要构建/刷机；推荐项标注“推荐”；
-- **请求决策**：请开发人员回复 A/B/C；选择结果由轮询同步后，按所选路线继续生成补丁/PR。
-
-写作要求：纯技术分析，结论必有依据，禁止套话、情绪化文字与空泛总结。发布由 `publication.analysis_options_comment` 控制（当前 `auto`）；`dry_run=true` 时发布前仍需你在会话中确认。
+- 只加日志/埋点，**不改变行为**；分支 `ai-debug/issue-<编号>-*`，只创建、不合入；
+- 评论包含插桩点与 TAG、复现与采集命令（`adb logcat -s openfde<编号>`）、回传要求、移除方式；
+- 当前构建关闭，由开发自行构建/刷机；回传调试日志后按新证据进入新 revision 重新分析。
 
 ## 求助与验证闭环
 
@@ -130,7 +148,7 @@ python3 automation/openfde_ai_server.py \
 | 无人值守 + `auto` | 发布 A/B/C 求助评论 | 发布交付/验证征询评论 |
 | 任意 + `manual` | 不发 | 仅留草稿 |
 
-例外：`publication.analysis_options_comment=auto` 时，“无法立即修复”的原因链+修复选项征询评论（`analysis-options`）会发布到 issue 并停在 `awaiting_direction`（不受 `pr_only` 限制）；`dry_run=true` 时发布前仍需你在会话中确认。
+例外：`publication.analysis_options_comment=auto` 时，“置信度不足”的原因链+修复选项征询评论（`analysis-options`）会发布到 issue 并停在 `awaiting_direction`（不受 `pr_only` 限制）；`reproduction_plan_comment` / `debug_pr_comment` 为 `auto` 时，D/E 产出的复现方案/调试 PR 评论同样发布并保持 `awaiting_direction`。`dry_run=true` 时发布前仍需你在会话中确认。
 
 **重新进入下一轮（推荐用法）**：在 pi 会话里直接说：
 
@@ -145,8 +163,8 @@ python3 automation/openfde_ai_server.py \
 
 其余行为：
 - 分析受阻（或按耗时预算触发）时停 `awaiting_direction`；交互会话内直接问，无人值守且 `auto` 时才发布求助评论；
-- 交付修复后停 `awaiting_verification`：回复 `验证通过` 收敛为 `confirmed_fixed` 并归档；回复 `仍有问题`（附新日志/截图）开启新 revision 重新分析；
-- 轮询：`deploy/reply-poll.sh` 默认每 3 分钟检查一次新回复（`REPLY_POLL_SECONDS` 或 profile `replies.poll_seconds` 可调整）；无新回复时不消耗模型调用。
+- 交付修复后停 `awaiting_verification`：回复 `验证通过` 收敛为 `confirmed_fixed` 并归档；回复 `仍有问题`（附新日志/截图）开启新 revision 重新分析；调试 PR 回传日志同样按新证据进入新 revision；
+- 轮询：`deploy/reply-poll.sh` 默认每 5 分钟检查一次新回复（`REPLY_POLL_SECONDS` 或 profile `replies.poll_seconds` 可调整）；无新回复时不消耗模型调用、保持等待；`awaiting_direction` 超过 30 分钟仅在日志与下次会话提示。
 
 ## 浏览与分析一个问题
 
