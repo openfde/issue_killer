@@ -1,150 +1,83 @@
-# 使用指南
+# 使用指南（服务器 CLI / 队列）
 
-本系统分析 `openfde/openfde` issue，按证据下载必要附件、读取 manifest、缓存只读源码，并输出根因分析、修复建议、未验证 patch 和 GitHub 评论草稿。
+当前推荐流程：
 
-它不修改 OpenFDE 源码或源码缓存，不创建 PR，也不发布 GitHub 评论。唯一例外是 profile `build` 配置声明的授权构建助手：它在受控构建树内临时应用 patch、完成受限构建并在退出前回滚补丁（默认人工触发）。patch 仍是给 issue 用户自行验证的建议。
+- Docker 一键部署：见 [README 6.9](../../README.md#69-docker-一键部署无-aosp-构建推荐)；
+- 本机交互式 Pi：见 [Pi 使用指南](pi-usage.md)；
+- 工作流、状态与置信度分流：见 [工作流架构](../architecture/workflow.md)。
+
+本页只列服务器 CLI、队列、日志和结果查看，避免与 README 重复。
 
 ## 准备
 
-在运行用户身份下完成：
-
 ```sh
-gh auth login -h github.com
-export DEEPSEEK_API_KEY='...'
+gh auth status
+export DEEPSEEK_API_KEY='...'        # 或其他 provider 的 key
+# fde-manifests/ 必须在项目根目录
+cp config/openfde-ai-server.example.json config/openfde-ai-server.json
 ```
 
-`GH_TOKEN` 仅供 Docker 使用；不要把任意 token 写入 JSON、日志或 issue 工件。确保 `fde-manifests/` 已位于项目根目录。
+`config/openfde-ai-server.json` 的关键项：
 
-配置文件是 `config/openfde-ai-server.json`。关键项：
+| 字段 | 说明 |
+| --- | --- |
+| `profile` | 使用的 profile |
+| `scan.sync_page_size` / `max_issues_per_run` | 扫描分页与每轮 issue 上限 |
+| `scan.max_workers_per_run` | 每轮并发 worker 数 |
+| `worker.execute` | `true` 启动 Pi 分析；`false` 只发现/入队 |
+| `worker.timeout_seconds` / `retry_limit` | 单 issue 超时与重试 |
+| `worker.max_atomic_steps_per_issue` | 单 issue 每轮最多推进的原子步数 |
+| `worker.stream_logs` | 是否写 `data/logs/` |
 
-```json
-"worker": {
-  "execute": true,
-  "timeout_seconds": 1800,
-  "retry_limit": 2,
-  "max_atomic_steps_per_issue": 16
-}
-```
-
-一次 issue 会连续执行原子 skill，直到 `archived`、`needs_information`、`blocked`，或达到步骤上限。上限到达时会重新入队，下一次扫描继续；不会将中间步骤误标为完成。
-
-## Docker 定时扫描
-
-先验证镜像：
+## 队列与扫描
 
 ```sh
-docker run --rm openfde-ai-assistant:pi pi --version
-```
-
-启动常驻任务：
-
-```sh
-docker compose up -d --build scanner
-```
-
-容器立即扫描一次，之后按 `SCAN_INTERVAL_SECONDS`（默认 1800 秒）重复扫描。停止但保留队列、日志和工件：
-
-```sh
-docker compose down
-```
-
-查看容器扫描日志：
-
-```sh
-docker compose logs -f scanner
-```
-
-## 直接分析一个 Issue
-
-Docker 方式：
-
-```sh
-docker compose exec scanner python automation/openfde_ai_server.py \
-  --workspace /workspace \
-  --config config/openfde-ai-server.json \
-  analyze --issue 470
-```
-
-宿主机方式：
-
-```sh
-python3 automation/openfde_ai_server.py \
-  --workspace "$PWD" \
-  --config config/openfde-ai-server.json \
-  analyze --issue 470
-```
-
-`analyze` 先用 `gh issue view` 获取该编号，再进入与定时扫描相同的状态机；不需要先运行 `scan`。队列汇总：
-
-```sh
-python3 automation/openfde_ai_server.py \
-  --workspace "$PWD" \
+# 状态
+python3 automation/openfde_ai_server.py --workspace "$PWD" \
   --config config/openfde-ai-server.json status
+
+# 扫描并入队（worker.execute=false 时只入队）
+python3 automation/openfde_ai_server.py --workspace "$PWD" \
+  --config config/openfde-ai-server.json scan
+
+# 扫描并执行本轮 worker
+python3 automation/openfde_ai_server.py --workspace "$PWD" \
+  --config config/openfde-ai-server.json scan --execute
+
+# 直接分析 / 单步 worker / 重新入队
+python3 automation/openfde_ai_server.py --workspace "$PWD" \
+  --config config/openfde-ai-server.json analyze --issue <编号>
+python3 automation/openfde_ai_server.py --workspace "$PWD" \
+  --config config/openfde-ai-server.json worker --issue <编号>
+python3 automation/openfde_ai_server.py --workspace "$PWD" \
+  --config config/openfde-ai-server.json requeue --issue <编号>
 ```
 
-只扫描/入队但不运行 Pi：将 `worker.execute` 临时改为 `false` 后运行 `scan`。一次性扫描并强制本轮执行 Pi：
+`scan` 会连续推进同一 issue 的原子步骤，直到终态或达到 `max_atomic_steps_per_issue`。`awaiting_direction`/`awaiting_verification` 是等待态：需要人工回复，Docker 部署由 `poller` 负责轮询，本机可运行 `deploy/reply-poll.sh`。
+
+## 日志
 
 ```sh
-python3 automation/openfde_ai_server.py \
-  --workspace "$PWD" \
-  --config config/openfde-ai-server.json scan --execute
+find data/logs -type f -print
+tail -f data/logs/reply-poll.log
 ```
-
-## Pi 交互式分析
-
-在项目根目录运行 `pi`，输入 `/reload`，再在 Pi 对话中使用：
-
-```text
-/skill:run-issue-workflow 使用 profiles/openfde/profile.json 分析问题 470；只读分析，不发布、不改源码、不构建、不测试。
-```
-
-人工模式必须在当前请求明确给出 issue 编号或 URL；skill 每次只推进一个原子步骤。完整交互细节见 [Pi 交互分析](pi-usage.md)。
 
 ## 查看结果
 
-每个 issue 的唯一目录是：
+每个 issue 的工件在 `.fde-ai/issues/<编号>/`；格式见 [Issue 工件目录](../architecture/artifact-layout.md)。
 
-```text
-.fde-ai/issues/<issue号>/
-├── state.json
-├── input/
-├── evidence/
-├── analysis/
-├── solution/
-├── patch/
-├── build/
-├── comment/
-└── archive/
-```
+- 修复补丁：`patch/0001-<名称>.patch`；
+- 调试插桩补丁（选择 E 时）：`patch/debug-0001-<名称>.patch` + `patch/debug.json`；
+- 评论草稿与发布记录：`comment/`；
+- 构建：默认关闭（`build.enabled=false`），启用后由授权助手在受控构建树内临时应用补丁并回滚。
 
-patch 的唯一入口：
+## systemd
 
-```text
-.fde-ai/issues/<issue号>/patch/0001-<名称>.patch
-```
+宿主机定时运行 `scan` 的安装与运维见 [服务器部署与运维](server-deployment.md)。
 
-它配有 `patch.json`、`validation.json`，其中应明确写有 base commit、SHA-256、证据 claim 和所有 `not_run` 项。评论草稿位于 `comment/github-comment.md`，不会被自动发布。需要编译验证时，先由 `request-build` 写出 `build/build-request.json`，再运行受控构建助手（默认人工）：
+## 发布与边界
 
-```sh
-deploy/server/fde-ai-build.sh --issue 470
-```
-
-构建结果与产物哈希记录在 `build/build-result.json`，`collect-build-artifacts` 校验后写入 `build/artifacts.json`；补丁在构建结束后被助手回滚。
-
-协调器每步的 Pi 输出位于 `data/logs/`；Docker 中为 `/workspace/data/logs/`，可执行：
-
-```sh
-docker compose exec scanner sh -lc 'find /workspace/data/logs -type f -print'
-```
-
-## 宿主机 systemd 定时任务
-
-按照 [服务器部署与运维](server-deployment.md) 安装 `openfde-ai-scan.timer`。timer 调用同一个 `scan` 命令，配置中 `worker.execute=true` 时会自动推进 issue。
-
-查看或停止：
-
-```sh
-sudo systemctl status openfde-ai-scan.timer
-sudo journalctl -u openfde-ai-scan.service -f
-sudo systemctl disable --now openfde-ai-scan.timer
-```
+- `publication.interaction_comments=pr_only`：修复交付/验证征询与 `analysis-options` 等明确类型可按策略发布；
+- PR 只创建、不合入；issue 关闭始终人工；
+- 无人值守遇到需人工选择的节点会停在 `awaiting_direction`/`awaiting_verification`，不会自行猜修复路线；
+- 不修改只读源码树；补丁、PR 与结论均标注 `not_run`/未验证。

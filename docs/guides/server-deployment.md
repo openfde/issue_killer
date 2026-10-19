@@ -40,4 +40,4 @@ sudo -u openfde-ai python3 /opt/openfde-ai/app/automation/openfde_ai_server.py \
 sudo systemctl disable --now openfde-ai-scan.timer
 ```
 
-将 `worker.execute` 改为 `false` 仅保留 issue 发现与入队。系统不会发布评论、修改源码、应用 patch 或运行构建/测试。
+将 `worker.execute` 改为 `false` 仅保留 issue 发现与入队。服务器按发布策略发布评论并可在人工确认的关键节点创建 PR（只创建、不合入）；默认不构建，不修改只读源码；无人值守遇到需人工选择的节点会停在等待态。

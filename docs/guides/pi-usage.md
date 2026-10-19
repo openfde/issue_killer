@@ -32,13 +32,7 @@ gh auth status
 pi
 ```
 
-首次使用或技能更新后，在 Pi 内执行：
-
-```text
-/reload
-```
-
-随后在 Pi 对话中输入下列技能命令。它们不是 shell 命令，因此不要直接粘贴到 zsh/bash。
+启动后直接使用下列技能命令。它们不是 shell 命令，因此不要直接粘贴到 zsh/bash。技能更新后退出并新开会话（`pi`，不要 `pi -c`），见文首说明。
 
 ```text
 /skill:list-github-issues 使用 profiles/openfde/profile.json 列出全部问题的编号、状态、标题、标签和更新时间；不要下载详情或写入 GitHub。
@@ -232,7 +226,7 @@ deploy/server/fde-ai-build.sh --issue <issue号>
 
 ## 常见问题
 
-**没有候选技能：** 确认当前目录是项目根目录，执行 `/reload`，并在 Pi `/settings` 启用技能命令。
+**没有候选技能：** 确认当前目录是项目根目录，退出并新开会话（`pi`，不要 `pi -c`），并在 Pi `/settings` 启用技能命令。
 
 **没有完整 Android/FDE 环境：** 设备侧启动、运行时和验收仍是设计边界，标记为 `not_run`；需要编译验证时，按 profile `build` 配置运行受控构建助手，把结果记为构建证据而非用户验证。
 

@@ -16,7 +16,7 @@ flowchart TD
 
     K --> L[启动 Pi 无会话]
     L --> M[pi --no-session --skill run-issue-workflow]
-    M --> N[受信任提示词：仅当前 issue、只读、禁止发布/改源码/构建]
+    M --> N[受信任提示词：仅当前 issue、只读源码、评论须经发布门槛、禁止构建]
     N --> O[初始化或读取 .fde-ai/issues/N/state.json]
     O --> P[恰好执行一个原子 skill]
 

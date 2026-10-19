@@ -38,7 +38,7 @@ docker exec -it openfde-ai bash      # 进入容器后运行 pi
 - [1. 能力与边界](#1-能力与边界)
 - [2. 工作流一览](#2-工作流一览)
 - [3. 从代码获取](#3-从代码获取)
-- [4. 安装](#4-安装)
+- [4. 本机交互式安装（可选）](#4-本机交互式安装可选)
 - [5. 使用配置](#5-使用配置)
 - [6. 各环节任务命令](#6-各环节任务命令)
 - [7. 执行过程](#7-执行过程)
@@ -150,7 +150,9 @@ Docker 一键部署时无需手工准备：首次启动的 `sources-sync` 默认
 
 仅当需要受控构建（`build.enabled=true`）时准备，通常是 `fde-sources` 的可写副本或挂载视图；构建树必须干净，且 HEAD 与补丁的 base commit 一致。构建助手会临时应用补丁、构建、记录产物并在退出前回滚补丁。
 
-## 4. 安装
+## 4. 本机交互式安装（可选）
+
+> 使用 Docker 时**不需要本章**；直接看 [6.9 Docker 一键部署](#69-docker-一键部署无-aosp-构建推荐)。本章只用于本机已有源码树的交互式 Pi。
 
 ### 4.1 系统依赖
 
@@ -200,6 +202,8 @@ pi update --models
 
 Node 24 + Pi 0.84.2 已验证；其他版本请先运行 `pi --version` 与一次最小对话自检。
 
+> Docker 用户不需要复制该 `settings.json`；容器会根据 `PI_PROVIDER`/`PI_MODEL` 生成，见 [6.9](#69-docker-一键部署无-aosp-构建推荐)。
+
 ### 4.3 环境变量
 
 ```sh
@@ -217,6 +221,8 @@ export PI_TELEMETRY=0
 
 建议写入 `~/.bashrc`，**不要**写入仓库、profile、日志或 issue 工件。
 
+> Docker 部署可把变量写入 `.env`，见 [6.9](#69-docker-一键部署无-aosp-构建推荐)。
+
 ### 4.4 GitHub Token 配置（GH_TOKEN）
 
 工作流用 `gh` 读取 issue/评论/附件、发布评论、创建 PR；`create-fix-pull-request` 还会通过 `gh auth setup-git` 用同一个 token 推送 `ai/` 分支。**Docker 容器不共享宿主机的 `gh` 登录态，必须显式提供 `GH_TOKEN`。**
@@ -233,28 +239,17 @@ export PI_TELEMETRY=0
   - Repository permissions：Issues `Read and write`、Contents `Read and write`、Pull requests `Read and write`、Metadata `Read`（必选）
   - Organization permissions（可选）：Members `Read`（减少 `read:org` 告警）
 
-**配置（Docker）**
+**配置**
 
-```sh
-export GH_TOKEN='ghp_...'          # 或 github_pat_...
-./deploy/docker/up.sh
-```
-
-也可以写入项目根目录 `.env`（`up.sh` 会自动生成；已被 `.gitignore` 忽略）：
-
-```sh
-GH_TOKEN=ghp_...
-```
+宿主机交互式：`export GH_TOKEN='ghp_...'`（或 `gh auth login`）。Docker：在 `up.sh` 前 export 或写入 `.env`，见 [6.9](#69-docker-一键部署无-aosp-构建推荐)。
 
 **验证**
 
 ```sh
-gh auth status                                   # 宿主机
-docker exec -it openfde-ai gh auth status
-docker exec -it openfde-ai gh issue list --repo openfde/openfde --limit 1
+gh auth status
 ```
 
-`gh auth status` 提示缺少 `read:org` 不影响 issue 读取；需要组织级查询时补该 scope 并重新授权。更换 token 后需重新运行 `./deploy/docker/up.sh`（或 `docker compose up -d --force-recreate`）让容器使用新值。token 只放环境变量或 `.env`，不要提交到仓库；建议专用账号/最小权限并定期轮换。
+Docker 内的验证命令见 [6.9](#69-docker-一键部署无-aosp-构建推荐)。token 只放环境变量或 `.env`，不要提交到仓库；建议专用账号/最小权限并定期轮换。
 
 ### 4.5 验证安装
 
@@ -266,6 +261,8 @@ pi --version
 gh auth status
 ls .pi/skills | head                                # 34 个 skill 符号链接
 ```
+
+Docker 安装验证见 [6.9](#69-docker-一键部署无-aosp-构建推荐)。
 
 ## 5. 使用配置
 
@@ -501,22 +498,15 @@ rsync -a --exclude fde-sources --exclude fde-manifests --exclude .fde-ai --exclu
 
 #### 4) 配置凭据
 
-GitHub token 的创建与权限（经典 PAT `repo` + `read:org`，或 fine-grained Issues/Contents/PR 读写 + Metadata 读取）见 [4.4 GitHub Token 配置](#44-github-token-配置ghtoken)。Docker 容器不共享宿主 `gh` 登录态，必须显式提供：
+按 [4.4](#44-github-token-配置ghtoken) 创建 `GH_TOKEN`；模型默认 `deepseek/deepseek-flash`，其他模型见 [4.3](#43-环境变量)。Docker 容器不共享宿主 `gh` 登录态：
 
 ```sh
-export GH_TOKEN='ghp_...'
-export DEEPSEEK_API_KEY='...'          # 默认模型
-# 其他模型：
-# export PI_PROVIDER=openai PI_MODEL=<model> OPENAI_API_KEY='...'
-# export PI_BASE_URL=https://...       # OpenAI 兼容网关
+export GH_TOKEN='...'
+export DEEPSEEK_API_KEY='...'
+# 其他模型：export PI_PROVIDER=... PI_MODEL=... <PROVIDER>_API_KEY=...
 ```
 
-`up.sh` 会自动生成 `.env`（已加入 `.gitignore`）；已 export 的变量优先，不会被 `.env` 覆盖。也可以直接编辑 `.env`：
-
-```sh
-GH_TOKEN=ghp_...
-DEEPSEEK_API_KEY=...
-```
+`up.sh` 会自动生成 `.env`；已 export 的变量优先，也可以编辑 `.env`。
 
 #### 5) 一键启动
 
@@ -620,39 +610,7 @@ docker rmi openfde-ai-assistant:pi   # 可选：删除镜像，下次 up 重新�
 
 ### 6.10 无人值守 / 服务端（可选）
 
-```sh
-# 队列与状态
-python3 automation/openfde_ai_server.py --workspace "$PWD" \
-  --config config/openfde-ai-server.json status
-
-# 扫描并入队（worker.execute=false 时只入队）
-python3 automation/openfde_ai_server.py --workspace "$PWD" \
-  --config config/openfde-ai-server.json scan
-
-# 扫描并执行本轮 worker
-python3 automation/openfde_ai_server.py --workspace "$PWD" \
-  --config config/openfde-ai-server.json scan --execute
-
-# 直接分析指定 issue / 单步 worker / 重新入队
-python3 automation/openfde_ai_server.py --workspace "$PWD" \
-  --config config/openfde-ai-server.json analyze --issue <编号>
-python3 automation/openfde_ai_server.py --workspace "$PWD" \
-  --config config/openfde-ai-server.json worker --issue <编号>
-python3 automation/openfde_ai_server.py --workspace "$PWD" \
-  --config config/openfde-ai-server.json requeue --issue <编号>
-```
-
-systemd 定时器（宿主机）：
-
-```sh
-sudo cp deploy/systemd/openfde-ai-scan.service /etc/systemd/system/
-sudo cp deploy/systemd/openfde-ai-scan.timer  /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now openfde-ai-scan.timer
-sudo journalctl -u openfde-ai-scan.service -f
-```
-
-详细说明见 [服务器部署](docs/guides/server-deployment.md) 与 [aosp17-ai 容器部署](deploy/server/README.md)。
+服务器 CLI、队列、日志与 systemd 的完整命令见 [服务器 CLI 使用指南](docs/guides/usage.md) 与 [服务器部署](docs/guides/server-deployment.md)。Docker 用户直接使用 6.9 的 `scanner`/`poller`，不需要本节。
 
 ### 6.11 受控构建（可选，默认关闭）
 
@@ -869,11 +827,12 @@ pi --version
 ## 10. 文档索引
 
 - [Pi 使用指南](docs/guides/pi-usage.md)：交互命令、分流、回复闭环；
-- [Docker 部署](docs/guides/docker-deployment.md)：一键启动、源码子集同步、容器内交互；
+- [Docker 容器运维](docs/guides/docker-deployment.md)：日常命令、服务与卷、停止清理（完整安装见 6.9）；
+- [服务器 CLI 使用指南](docs/guides/usage.md)：队列、扫描、日志与 patch；
 - [工作流架构](docs/architecture/workflow.md)：状态机、置信度分流、安全边界；
 - [取证采集](docs/architecture/intake.md)：A/B/C/D 采集模式与体积约束；
 - [组件归属](docs/architecture/component-attribution.md)：三层归属与人工回退；
-- [Issue 工件目录](docs/architecture/artifact-layout.md)：产物格式与唯一 patch 入口；
+- [Issue 工件目录](docs/architecture/artifact-layout.md)：产物格式与 patch 入口；
 - [服务器部署](docs/guides/server-deployment.md)：systemd 服务账户与定时器；
 - [aosp17-ai 容器部署](deploy/server/README.md)：容器与受控构建助手；
 - [服务器工作进程](docs/architecture/server-worker.md)：队列、并发与 Pi 进程语义。
