@@ -2,7 +2,7 @@
 
 ## 准备
 
-在项目根目录启动 Pi。首次使用或技能更新后输入 `/reload`；Pi 会发现当前项目 `.pi/skills/` 中的通用技能。
+在项目根目录启动 Pi。**技能更新后必须退出并新开会话**（`pi`，不要 `pi -c`；旧会话不会换掉已注入的技能文本，直接用“继续”会沿用旧流程）；启动后用 `/skill:...` 调用项目技能，Pi 会发现当前项目 `.pi/skills/` 中的通用技能。
 
 ```sh
 cd /you/project/path/to/fde-ai-assistant
@@ -138,6 +138,8 @@ python3 automation/openfde_ai_server.py \
 继续 494
 继续 494；选 A（更新 PR），PAGE_TURN_DISTANCE 用 60
 ```
+
+（技能有更新时先退出并新开会话，再执行上述命令。）
 
 它会先重读状态、自动同步 issue 新回复（如有），然后在**本地**继续分析修复；对任意中间状态都适用（包括无人值守停下的 `patch_validated`）。关键节点与 A/B/C 默认在终端内完成，不产生 issue 评论；原因链+修复选项征询（`analysis-options`）除外。
 

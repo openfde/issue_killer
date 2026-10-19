@@ -45,6 +45,26 @@ class AnalysisOptionsTests(unittest.TestCase):
         for value in ("analysis_options_comment", "analysis-options", "awaiting_direction"):
             self.assertIn(value, publish, value)
 
+    def test_resume_stops_at_the_next_key_node(self):
+        workflow = (ROOT / "skills/run-issue-workflow/SKILL.md").read_text(encoding="utf-8")
+
+        for value in (
+            "硬性停止点",
+            "下一个关键节点",
+            "必须结束本轮",
+            "不得在同一轮调用",
+            "根因重点解析",
+            "判定清单",
+            "不得因用户说“继续”而跳过",
+        ):
+            self.assertIn(value, workflow, value)
+
+    def test_skill_updates_require_a_new_pi_session(self):
+        for name in ("AGENTS.md", "docs/guides/pi-usage.md"):
+            content = (ROOT / name).read_text(encoding="utf-8")
+            self.assertIn("pi -c", content, name)
+            self.assertIn("新开会话", content, name)
+
     def test_analysis_and_solution_artifacts_include_the_new_requirements(self):
         trace = (ROOT / "skills/trace-evidence-to-source/SKILL.md").read_text(encoding="utf-8")
         for value in (
