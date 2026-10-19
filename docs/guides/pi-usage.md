@@ -105,7 +105,7 @@ python3 automation/openfde_ai_server.py \
 | 分数 | 处理 |
 | --- | --- |
 | ≥70 | 修复助手：补丁 → PR → 交付/验证征询评论 → `awaiting_verification` |
-| 50–69 | 分析助手：原因链 + 修复选项 A/B/C + D/E/F 选项 → `awaiting_direction` |
+| 50–69 | 分析助手：原因链 + 修复选项 A/B/C + D/E/F 选项（同一轮生成草案，确认后发布）→ `awaiting_direction` |
 | <50 | 分析助手深度分析（最多 2 轮）；仍不足则发调查选项 → `awaiting_direction` |
 
 ## 原因链与修复选项（50–69）

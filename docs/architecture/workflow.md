@@ -64,8 +64,8 @@ load-project-profile
    │    → 仅当 build.enabled=true 时 request-build → collect-build-artifacts
    │    → awaiting_verification → confirmed_fixed → archive-case
    ├─ 50–69（analysis_reply_min_confidence ≤ score < auto_pr_min_confidence）：
-   │    draft-analysis-options（原因链 + A/B/C + D/E/F 选项；D/E 只列不展开）
-   │    → publish-policy-comment（analysis-options）→ awaiting_direction
+   │    draft-analysis-options（同一轮生成原因链 + A/B/C + D/E/F 草案；D/E 只列不展开）
+   │    → 停在分流节点确认 → publish-policy-comment（analysis-options）→ awaiting_direction
    │    → A/B/C → 修复流程；D → 展开复现方案并追加回复；E → 调试插桩 PR；F → 深度分析
    └─ <50：
         分析助手深度分析（最多 triage.max_deep_analysis_rounds 轮）

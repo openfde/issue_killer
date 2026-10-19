@@ -54,8 +54,10 @@ class AnalysisOptionsTests(unittest.TestCase):
             "必须结束本轮",
             "不得在同一轮调用",
             "根因重点解析",
+            "根因重点解析与置信度分流",
             "判定清单",
             "不得因用户说“继续”而跳过",
+            "不得只问",
         ):
             self.assertIn(value, workflow, value)
 

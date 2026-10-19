@@ -15,7 +15,7 @@ class ReproductionPlanTests(unittest.TestCase):
     def test_workflow_offers_the_reproduction_plan_at_the_root_cause_node(self):
         workflow = (ROOT / "skills/run-issue-workflow/SKILL.md").read_text(encoding="utf-8")
         self.assertIn("design-reproduction-plan", workflow)
-        self.assertIn("设计复现与验证方案", workflow)
+        self.assertIn("复现与验证方案", workflow)
 
         usage = (ROOT / "docs/guides/pi-usage.md").read_text(encoding="utf-8")
         self.assertIn("design-reproduction-plan", usage)

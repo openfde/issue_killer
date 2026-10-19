@@ -12,7 +12,7 @@
 - 任何 GitHub 详情读取、附件下载或源码下载前，必须取得当前调用方显式指定的问题编号或完整 URL；不得从问题列表、旧产物或上下文自行选择。唯一例外是受信任的服务器队列明确传入的编号；它只能处理该编号。
 - 所有 GitHub 问题、评论和仓库元数据读取使用共享 GitHub 命令行工具 `gh`；先运行 `gh auth status`，只允许 `gh issue` 和只读 `gh api` 调用，不使用专有连接器或 Python GitHub API 请求。
 - 人机闭环：受阻时经 `escalate-issue` 发布带 A/B/C 的求助评论并停在 `awaiting_direction`；交付修复经 `publish-policy-comment` 后在 `awaiting_verification` 等待自测结论；开发人员回复由 `sync-github-replies` 宽容解析（选项/方向/仍有问题+证据/验证通过），据此继续分析或收敛为 `confirmed_fixed`；issue 关闭始终由人工完成。
-- 置信度分流：`propose-fix` 输出 `fix_confidence`（取根因与修复的较低值）。≥70 才生成修复 PR；50–69 由分析助手发布原因链+修复选项（A/B/C + D 复现方案/E 调试 PR/F 深度分析，只列不展开）并停在 `awaiting_direction`；<50 先深度分析（最多 2 轮）。选择 D 展开复现方案并追加 issue 回复；选择 E 创建 `ai-debug/` 插桩 PR（只加日志、不改行为、不合入）；调试日志按新证据进入新 revision。等待态每 5 分钟轮询，无回复保持等待。
+- 置信度分流：分析校验后必须在同一轮调用 `propose-fix` 计算 `fix_confidence`（取根因与修复的较低值），并直接给出交付物选项。≥70 才生成修复 PR；50–69 由分析助手生成原因链+修复选项草案（A/B/C + D 复现方案/E 调试 PR/F 深度分析，只列不展开），确认后发布并停在 `awaiting_direction`；<50 先深度分析（最多 2 轮）。选择 D 展开复现方案并追加 issue 回复；选择 E 创建 `ai-debug/` 插桩 PR（只加日志、不改行为、不合入）；调试日志按新证据进入新 revision。等待态每 5 分钟轮询，无回复保持等待。
 - 最简 issue 整理（手动）：测试人员可只提交一句话（+bugreport 或截图）；创建完成后由调用方显式执行整理命令——pi 内 `/skill:enrich-issue-intake 整理问题 #N` 或 shell `bash deploy/enrich-issue.sh N`。整理只编辑该 issue 的标题/正文（保留原始描述、不写 SHA-256、发生时间只写范围），不关闭、不发评论、不改附件；有 bugreport 走标准取证格式，无 bugreport（仅文字+截图）时用模型视觉读图并给出“初步分析（未验证）”。不得自动扫描或自行选择新 issue。
 - 仓库 Git 提交信息（标题与正文）一律使用英文。
 - 技能加载：skills 在 Pi 会话启动时加载；修改或拉取 skills 后必须退出并**新开会话**（`pi`，不要 `pi -c`；仅 `/reload` 后继续说“继续”也可能沿用旧技能文本），再从 `/skill:run-issue-workflow` 开始。

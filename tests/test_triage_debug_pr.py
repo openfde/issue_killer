@@ -49,6 +49,8 @@ class TriageDebugPrTests(unittest.TestCase):
             "create-debug-pull-request",
             "phase",
             "direction_wait_since",
+            "同一轮",
+            "交付物选项",
         ):
             self.assertIn(value, workflow, value)
 

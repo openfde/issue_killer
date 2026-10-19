@@ -12,17 +12,17 @@ description: 当交互用户希望通过原子 skill 启动、恢复或检查一
 允许的顺序为 `load-project-profile` → `build-project-context` → `fetch-github-issue` → 一个证据分支 → `resolve-manifest-components`（低置信时经 `confirm-component-mapping` 人工确认）→ `cache-provenanced-sources` → `retrieve-knowledge` → `trace-evidence-to-source` → `verify-analysis` → `propose-fix`（生成候选方案并计算 `fix_confidence`）→ **置信度分流**：
 
 - `score ≥ triage.auto_pr_min_confidence`（默认 70）：`draft-patch` / `validate-patch-artifact` → 可选 `create-fix-pull-request`（人工确认；只创建/更新 PR、不合入主分支）→ `draft-issue-comment` → `publish-policy-comment`（**交付/验证征询评论必须立即发布到 issue**）→ **仅当 `build.enabled=true` 时** `request-build` → `collect-build-artifacts` → `awaiting_verification` →（回复轮询）→ `confirmed_fixed` → `archive-case`；
-- `triage.analysis_reply_min_confidence ≤ score < triage.auto_pr_min_confidence`（默认 50–69）：`draft-analysis-options`（原因链 + A/B/C + D/E/F 选项）→ `publish-policy-comment`（`analysis-options`）→ `awaiting_direction`；
-- `score < triage.analysis_reply_min_confidence`（默认 <50）：分析助手深度分析（最多 `triage.max_deep_analysis_rounds` 轮，默认 2）→ 仍不足则 `draft-analysis-options`（结论 + 缺口 + D/E/F 调查选项）→ `publish-policy-comment` → `awaiting_direction`。
+- `triage.analysis_reply_min_confidence ≤ score < triage.auto_pr_min_confidence`（默认 50–69）：`draft-analysis-options`（**同一轮生成草案**：原因链 + A/B/C + D/E/F 选项）→ **停在分流节点等待确认** → 确认后 `publish-policy-comment`（`analysis-options`）→ `awaiting_direction`；
+- `score < triage.analysis_reply_min_confidence`（默认 <50）：分析助手深度分析（最多 `triage.max_deep_analysis_rounds` 轮，默认 2）→ 仍不足则 `draft-analysis-options`（结论 + 缺口 + D/E/F 调查选项）→ **停在分流节点等待确认** → 发布后 `awaiting_direction`。
 
 开发选择 A/B/C → 按所选路线回到 `propose-fix`/`draft-patch`/`create-fix-pull-request`；选择 D → `design-reproduction-plan`（展开并追加 issue 回复）→ 保持 `awaiting_direction`；选择 E → `draft-debug-patch` → `create-debug-pull-request` → 调试 PR 评论 → `awaiting_direction`；选择 F → 继续深度分析。收到调试日志/复现结果 → 按新证据进入新 revision 重新分析。任意阶段受阻时可先走 `escalate-issue`。
 
 **汇报与交互规范（人工交互模式）**：不逐步汇报所有原子步骤——加载配置、构建上下文、拉取 issue、证据提取、知识检索、引用校验等机械步骤内部连续执行，最多一句话带过（服务器队列模式仍按其提示词每次只推进一个原子步骤）。源码检索**一律使用 `rg`** 并限制范围与上限（`timeout`/`head`），禁止 `grep -r` 全树遍历。只在以下**关键节点**停下汇报，并给出 A/B/C 选项等待选择：
 
 1. **定位结论**：证据提取与组件归属完成——问题落在哪个组件的哪个功能；
-2. **根因重点解析**：分析校验通过——必须输出完整原因链（触发条件与前置状态、毫秒级时间线、按时间/调用顺序的因果链、直接原因、根本原因、放大因素、容错路径失效、未证实环节、影响面、已排除项），逐项带证据 ID/日志时间戳与 `文件:行号` 及置信度；**若根因仅来自代码推断且问题偶现，A/B/C 必须包含“设计复现与验证方案（无法从代码完全确认时用实验定位根因）”选项**；
-3. **修复方案与置信度分流**：展示 `fix_confidence`（score/根因/修复/未证实项）与推荐/替代方案（多条路线按 A/B/C 编号，含改动点/风险/验证判据），并说明分流结果（≥70 修复 PR；50–69 分析回复；<50 深度分析）；
-4. **原因链与修复选项回复（score < auto_pr_min_confidence）**：展示原因链要点与 A/B/C 修复选项——A. 发布原因链+选项到 issue，请开发选择（推荐）；B. 直接按推荐方案生成 PR（仅当 score ≥70）；C. 暂停/补充证据；同时列出 D. 复现与验证方案（不展开）、E. 调试 PR（不展开）、F. 深入分析（<50 时）；
+2. **根因重点解析与置信度分流**：分析校验通过——必须输出完整原因链（触发条件与前置状态、毫秒级时间线、按时间/调用顺序的因果链、直接原因、根本原因、放大因素、容错路径失效、未证实环节、影响面、已排除项），逐项带证据 ID/日志时间戳与 `文件:行号` 及置信度；**随后在同一轮调用 `propose-fix` 计算 `fix_confidence`，并按分数直接给出交付物选项**（见下条与第 4 条），不得只问“是否进入修复方案评估”；
+3. **修复方案（仅 score ≥ triage.auto_pr_min_confidence）**：展示 `fix_confidence`（score/根因/修复/未证实项）与推荐/替代方案（A/B/C，含改动点/风险/验证判据）；选项：A. 生成补丁并创建 PR（只创建、不合入） B. 只保留补丁文件 C. 暂停；
+4. **分析回复草案（50–69，或 <50 的调查选项）**：先 `draft-analysis-options` 生成草案并展示要点（原因链、`fix_confidence`、A/B/C 与 D/E/F）；选项：A. 发布到 issue B. 修改草案 C. 暂停；确认发布后停在 `awaiting_direction`；
 5. **复现与验证方案（开发者选择 D 时）**：稳定复现方法、观测点、修复后验证判定与根因确认实验（`design-reproduction-plan`），展开后追加 issue 回复，保持 `awaiting_direction`；
 6. **调试 PR（开发者选择 E 时）**：插桩点/TAG、采集命令（`adb logcat -s openfde<编号>`）、复现步骤、PR 链接；只加日志/埋点、不改行为、不合入、采集后移除；
 7. **求助（任意阶段受阻时）**：当前进度、已排除方向、具体问题与 A/B/C 选项（`escalate-issue`）；
@@ -33,13 +33,14 @@ description: 当交互用户希望通过原子 skill 启动、恢复或检查一
 **硬性停止点（防跑穿）**：
 
 - “继续 <编号>”只允许推进到**下一个关键节点**；输出关键节点汇报后**必须结束本轮**（不得再调用工具、不得继续下一个原子技能）。
-- 当前状态为 `analysis_verified`（含 revision 重置后的首次运行）时，下一个关键节点固定为【根因重点解析】；**不得在同一轮调用 `propose-fix`、`draft-patch`、`validate-patch-artifact` 或 `create-fix-pull-request`**。
-- revision 重置或状态为 `initialized` 的首次运行：必须先完成证据提取与分析，在【根因重点解析】停下；不得因用户说“继续”而跳过。
+- `analysis_verified` 后必须**在同一轮**继续 `propose-fix` 计算 `fix_confidence`（只写方案与分数，不生成补丁），然后停在【根因重点解析与置信度分流】；**不得在同一轮调用 `draft-patch`、`validate-patch-artifact` 或 `create-fix-pull-request`**（`create-debug-pull-request` 仅在选择 E 后）。
+- 分流节点必须**直接给出交付物选项**：50–69 先 `draft-analysis-options` 生成分析回复草案并请用户选择“发布/修改/暂停”；≥70 展示修复方案并请用户选择“生成 PR/只留补丁/暂停”；<50 展示深度分析或 D/E/F 调查选项。**不得只问“是否进入修复方案评估”**。
+- revision 重置或状态为 `initialized` 的首次运行：必须先完成证据提取与分析，再在同一轮完成 `propose-fix` 与分流，在【根因重点解析与置信度分流】停下；不得因用户说“继续”而跳过。
 - 【修复方案】节点必须展示推荐与替代方案（A/B/C，含改动点/风险/验证判据）并结束本轮等待选择；未收到明确选择前不得生成补丁或 PR。
 - 置信度门槛：`score < triage.auto_pr_min_confidence`（默认 70）时**禁止** `draft-patch`、`create-fix-pull-request`；50–69 必须先发 `analysis-options`；<50 禁止补丁/PR，只能深度分析或调查选项。
 - 深度分析最多 `triage.max_deep_analysis_rounds` 轮（默认 2）；达到上限仍 <50 → 必须停在 `awaiting_direction`（发调查选项或求助），不得继续硬耗。
 - 调试 PR 只在开发选择 E 后创建，且只加日志/埋点、不改行为；不是修复交付。
-- 一次回复内跨过两个及以上关键节点视为违规；宁可多停一次，也不得替用户做选择。
+- 一次回复内跨过两个及以上关键节点视为违规；分析 → `propose-fix` → 分流（含生成回复草案）视为同一个组合节点，但不得越过分流继续出补丁/PR。
 
 关键节点汇报格式（结论在前、简洁）：
 
@@ -57,13 +58,13 @@ C. <动作>
 示例：
 
 ```text
-【根因结论】筛选条件在窗口退出时没有被清空：provider 忽略了 name==null 的复位请求。
+【根因重点解析与分流】筛选条件在窗口退出时没有被清空：provider 忽略了 name==null 的复位请求（fix_confidence 82%）。
 依据：AllAppsProvider.kt:40-42（仅 name!=null 时覆盖 filter）；AppOverviewWindow.kt:417（退出时传 null）；日志 02:17:05.902 仍按旧关键字过滤
 产物：.fde-ai/issues/491/analysis/analysis.md
 
 下一步（回复 A/B/C）：
-A. 继续生成修复方案
-B. 先展示该窗口相关代码片段
+A. 生成补丁并创建 PR（只创建、不合入）
+B. 只保留补丁文件
 C. 暂停本轮
 ```
 
@@ -71,7 +72,7 @@ C. 暂停本轮
 
 **会话恢复规则**：任何会话（含被轮询/服务器唤醒的无人值守运行）继续处理时，必须先重读 `.fde-ai/issues/<issue号>/state.json` 与最新产物，从**当前实际状态**继续；不得依赖旧会话上下文，也不得因上下文与文件不一致而停止。
 
-**继续命令（交互会话，优先使用）**：在会话中说“继续 <编号>”时——先重读 `state.json`；若处于 `awaiting_direction`/`awaiting_verification`，先执行一次 `sync-github-replies` 检查 issue 新回复并据此更新状态；若开发人员在会话中直接给出选择/方向，则将其写入 `analysis/direction.json`（来源标注 `session`）后继续。然后**只推进到下一个关键节点并停下**（见“硬性停止点”）；该命令对任意中间状态都适用（包括无人值守停下的 `patch_validated` 等）。关键节点的 A/B/C **直接在本会话内询问并等待**，不在 issue 发交互评论（issue 评论仅用于无人值守的 PR 交付与 `analysis-options` 场景）。
+**继续命令（交互会话，优先使用）**：在会话中说“继续 <编号>”时——先重读 `state.json`；若处于 `awaiting_direction`/`awaiting_verification`，先执行一次 `sync-github-replies` 检查 issue 新回复并据此更新状态；若开发人员在会话中直接给出选择/方向，则将其写入 `analysis/direction.json`（来源标注 `session`）后继续。然后**只推进到下一个关键节点并停下**（见“硬性停止点”；`analysis_verified` 时该节点包含 `propose-fix`、分流与回复草案生成）；该命令对任意中间状态都适用（包括无人值守停下的 `patch_validated` 等）。关键节点的 A/B/C **直接在本会话内询问并等待**，不在 issue 发交互评论（issue 评论仅用于无人值守的 PR 交付与 `analysis-options` 场景）。
 
 **无人值守运行的收尾规则**：非交互运行（无会话）中遇到任何需要人工选择的节点——求助、补丁完成后的下一步、验证征询等——**必须停在受监控的等待态**（`awaiting_direction`/`awaiting_verification`），不得只把问题写进日志后停在无监控的中间态（如 `patch_validated`），否则无人能接手。发布规则：默认 `pr_only`——包含 PR 的修复交付/调试 PR 评论可发布；`publication.analysis_options_comment`/`reproduction_plan_comment`/`debug_pr_comment` 为 `auto` 时，对应评论可发布并停在 `awaiting_direction`；`auto` 时求助评论（A/B/C）也发布；`manual` 时任何交互评论都不发布。日志只作为审计记录。
 
@@ -79,7 +80,7 @@ C. 暂停本轮
 
 **阶段与计数**：`state.json` 记录 `phase`（analysis/fix）、`fix_confidence`、`deep_analysis_rounds`、`direction_wait_since`。分流后设置：`score ≥ triage.auto_pr_min_confidence → phase=fix`，否则 `phase=analysis`；深度分析每执行一轮递增 `deep_analysis_rounds`。
 
-**置信度分流与无法立即修复的交付规则（硬性）**：`propose-fix` 必须给出 `fix_confidence.score`（取根因与修复的较低值）。`score ≥ triage.auto_pr_min_confidence`（默认 70）才允许 `draft-patch` 与 PR；`50–69` 必须 `draft-analysis-options`（完整原因链 + A/B/C + D/E/F 选项）→ `publish-policy-comment`（`analysis-options`）→ `awaiting_direction`；`<50` 先深度分析（最多 2 轮），仍不足则发调查选项。在 <70 时**不得自行选择修复路线**，也不得生成补丁/PR。补充判定清单（命中任一，即使自评偏高也必须在回复中列为未证实/需补强）：分析中存在 medium/低置信结论、标注“推断/未证实”、需要复现或插桩、存在 ≥2 条互斥可行路线、改动影响面跨组件。开发选择 A/B/C 后由 `sync-github-replies` 写入 `analysis/direction.json` 再按路线继续；D → `design-reproduction-plan` 展开并追加回复；E → `draft-debug-patch` → `create-debug-pull-request`；F → 继续深度分析。原因链必须是纯技术分析（触发条件、毫秒级时间线、完整因果链、直接/根本原因、容错失效、未证实环节、影响面、排除项），每个结论带证据或源码位置，禁止套话和空泛总结。
+**置信度分流与无法立即修复的交付规则（硬性）**：`propose-fix` 必须给出 `fix_confidence.score`（取根因与修复的较低值）。`score ≥ triage.auto_pr_min_confidence`（默认 70）才允许 `draft-patch` 与 PR；`50–69` 必须在同一轮 `draft-analysis-options` 生成草案，停在分流节点由用户确认后再 `publish-policy-comment`（`analysis-options`）→ `awaiting_direction`；`<50` 先深度分析（最多 2 轮），仍不足则生成调查选项草案并等待确认。在 <70 时**不得自行选择修复路线**，也不得生成补丁/PR。补充判定清单（命中任一，即使自评偏高也必须在回复中列为未证实/需补强）：分析中存在 medium/低置信结论、标注“推断/未证实”、需要复现或插桩、存在 ≥2 条互斥可行路线、改动影响面跨组件。开发选择 A/B/C 后由 `sync-github-replies` 写入 `analysis/direction.json` 再按路线继续；D → `design-reproduction-plan` 展开并追加回复；E → `draft-debug-patch` → `create-debug-pull-request`；F → 继续深度分析。原因链必须是纯技术分析（触发条件、毫秒级时间线、完整因果链、直接/根本原因、容错失效、未证实环节、影响面、排除项），每个结论带证据或源码位置，禁止套话和空泛总结。
 
 **PR 与 issue 的同步规则（硬性）**：`create-fix-pull-request` 创建或更新 PR 后，编排**必须立即执行 `draft-issue-comment` → `publish-policy-comment`**，把该 revision 的交付/验证征询评论发布到 issue（`pr_only` 下这是唯一必发的过程评论）；不得因等待构建、等待人工或其他步骤而延迟。更新已有 PR 时，评论中注明更新后的分支/提交。构建结果若后到，追加一条简短更新评论。
 
