@@ -14,12 +14,14 @@ RUN apt-get update \
     && useradd --create-home --shell /bin/sh agent \
     && rm -rf /var/lib/apt/lists/*
 
-# Android repo 工具（首次启动按模块子集同步 fde-sources）；国内网络可覆盖 REPO_URL。
+# Android repo 工具（repo 模式需要；默认 GitHub 同步不依赖它，下载失败不阻塞构建）。
 ARG REPO_URL=https://storage.googleapis.com/git-repo-downloads/repo
 ARG REPO_FALLBACK_URL=https://mirrors.tuna.tsinghua.edu.cn/git/git-repo/repo
-RUN (curl -fsSL "$REPO_URL" -o /usr/local/bin/repo || curl -fsSL "$REPO_FALLBACK_URL" -o /usr/local/bin/repo) \
-    && chmod 0755 /usr/local/bin/repo \
-    && repo --version
+RUN if curl -fsSL "$REPO_URL" -o /usr/local/bin/repo || curl -fsSL "$REPO_FALLBACK_URL" -o /usr/local/bin/repo; then \
+        chmod 0755 /usr/local/bin/repo && repo --version; \
+    else \
+        echo "warning: repo launcher unavailable; github source sync still works"; \
+    fi
 
 COPY deploy/docker-entrypoint.sh /usr/local/bin/openfde-entrypoint
 COPY deploy/run-scan-loop.sh /usr/local/bin/openfde-scan-loop
