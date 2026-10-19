@@ -49,7 +49,7 @@ services:
       HOME: /tmp
       PI_CODING_AGENT_DIR: /tmp/pi-agent
       PI_TELEMETRY: "0"
-      GH_TOKEN: ${GH_TOKEN:?GH_TOKEN must be set in the Docker launcher environment}
+      GH_TOKEN: ${GH_TOKEN:-}
       PI_PROVIDER: ${PI_PROVIDER:-deepseek}
       PI_MODEL: ${PI_MODEL:-deepseek-flash}
       PI_BASE_URL: ${PI_BASE_URL:-}
@@ -97,7 +97,7 @@ services:
       HOME: /tmp
       PI_CODING_AGENT_DIR: /tmp/pi-agent
       PI_TELEMETRY: "0"
-      GH_TOKEN: ${GH_TOKEN:?GH_TOKEN must be set in the Docker launcher environment}
+      GH_TOKEN: ${GH_TOKEN:-}
       PI_PROVIDER: ${PI_PROVIDER:-deepseek}
       PI_MODEL: ${PI_MODEL:-deepseek-flash}
       PI_BASE_URL: ${PI_BASE_URL:-}
@@ -141,7 +141,7 @@ services:
       HOME: /tmp
       PI_CODING_AGENT_DIR: /tmp/pi-agent
       PI_TELEMETRY: "0"
-      GH_TOKEN: ${GH_TOKEN:?GH_TOKEN must be set in the Docker launcher environment}
+      GH_TOKEN: ${GH_TOKEN:-}
       PI_PROVIDER: ${PI_PROVIDER:-deepseek}
       PI_MODEL: ${PI_MODEL:-deepseek-flash}
       PI_BASE_URL: ${PI_BASE_URL:-}

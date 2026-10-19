@@ -21,7 +21,7 @@ class DockerDeploymentTests(unittest.TestCase):
         self.assertIn("/usr/local/bin/openfde-scan-loop", compose)
         self.assertIn("read_only: true", compose)
         self.assertIn("HOME: /tmp", compose)
-        self.assertIn("GH_TOKEN: ${GH_TOKEN:?", compose)
+        self.assertIn("GH_TOKEN: ${GH_TOKEN:-}", compose)
         self.assertIn("DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}", compose)
         self.assertIn("/workspace/.fde-ai", compose)
         self.assertIn("/workspace/data", compose)
