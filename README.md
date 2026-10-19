@@ -484,6 +484,13 @@ FORCE_SYNC=1 ./deploy/docker/up.sh        # 重新同步
 docker compose down                       # 不要用 down -v
 ```
 
+**退出容器**
+
+- 在 `pi` 内：输入 `/quit` 或 `/exit`（也可按 `Ctrl+D`）；
+- 回到容器 shell 后：输入 `exit`（或按 `Ctrl+D`）返回宿主机；
+- 如果用的是 `docker exec -it openfde-ai pi`，退出 Pi 即直接回到宿主机；
+- 退出 `exec` 不会停止 scanner/poller；停止服务用 `docker compose down`，重新启动用 `./deploy/docker/up.sh`。
+
 - 模型：`PI_PROVIDER`/`PI_MODEL` 写入 Pi settings（默认 `deepseek/deepseek-flash`）；其他提供方使用对应的 `*_API_KEY`，`PI_BASE_URL` 可指向 OpenAI 兼容网关。
 
 - `sources-sync`（一次性）：默认按 GitHub 镜像（48 个仓库，`fde_17`）同步，并按 `FDE_SOURCE_MODULES`（默认 `art build device external frameworks hardware openfde-sdk packages prebuilts system`）过滤；已有仓库复用。`FDE_SYNC_MODE=repo` 改用 Android `repo init/sync`，`none` 跳过（使用已准备好的树）。
@@ -698,7 +705,7 @@ docker compose --profile tools up -d shell
 docker exec -it openfde-ai-shell pi
 ```
 
-技能更新后必须退出容器内 Pi 并重新进入（新进程），不要依赖旧会话。
+技能更新后必须退出容器内 Pi 并重新进入（新进程），不要依赖旧会话。退出方式：`pi` 内 `/quit` 或 `/exit`（`Ctrl+D`）；容器 shell 内 `exit`（`Ctrl+D`）；`docker exec -it openfde-ai pi` 退出 Pi 即回到宿主机。
 
 **Docker 源码/清单权限**
 
