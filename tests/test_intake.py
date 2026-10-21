@@ -19,7 +19,7 @@ class IntakeTests(unittest.TestCase):
     def test_intake_skill_is_interactive_and_read_only(self):
         content = (ROOT / "skills/collect-device-evidence/SKILL.md").read_text(encoding="utf-8")
 
-        for value in ("bugreport", "screencap", "screenrecord", "data/intake/", "issue-draft", "不写 SHA-256", "系统版本号", "scp -r", "开始采集", "复现完成", "不得执行", "不得自动挑选", "禁止 root", "禁止 `logcat -c`", "issue-draft.md 全文", "log.tag", "setprop log.tag V", "日志开关"):
+        for value in ("bugreport", "screencap", "screenrecord", "data/intake/", "issue-draft", "不写 SHA-256", "build 版本号", "scp -r", "开始采集", "复现完成", "不得执行", "不得自动挑选", "禁止 root", "禁止 `logcat -c`", "issue-draft.md 全文", "log.tag", "setprop log.tag V", "日志开关", "build 版本", "CP2A", "不得用 `Android 17`"):
             self.assertIn(value, content, value)
 
     def test_removed_planning_skills_and_templates_are_gone(self):
@@ -33,7 +33,7 @@ class IntakeTests(unittest.TestCase):
             self.assertIn(value, skill, value)
 
         enrich = (ROOT / "skills/enrich-issue-intake/SKILL.md").read_text(encoding="utf-8")
-        for value in ("openfde-ai:intake", "时间线", "复现步骤（推测，未确认）", "原始描述", "gh issue edit", "初步分析（未验证）", "视觉", "无日志证据"):
+        for value in ("openfde-ai:intake", "时间线", "复现步骤（推测，未确认）", "原始描述", "gh issue edit", "初步分析（未验证）", "视觉", "无日志证据", "build 版本", "CP2A", "不得保留或使用"):
             self.assertIn(value, enrich, value)
 
         self.assertFalse((ROOT / "deploy/intake-watch.sh").exists())

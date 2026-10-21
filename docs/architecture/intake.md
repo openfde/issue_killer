@@ -14,7 +14,7 @@
 3. 日志开关预检（A/C，抓日志前）：`getprop log.tag`；非 `V`/`VERBOSE` 时执行 `setprop log.tag V` 并复核；失败则停止。设备使用 per-tag 时改用 `getprop log.tag.<TAG>`/`setprop log.tag.<TAG> V`（如 `DocumentsUI`、`ActivityTaskManager`、`WindowManager`）。这是本流程唯一允许的写操作，确认门需列出；
 4. 采集（除日志开关外只读）：`adb bugreport`、`adb exec-out screencap`、可选 `screenrecord` + `adb pull`；容器内使用网络 adb `adb connect <IP>:5555`；
 5. 打包：`data/intake/<日期>-<slug>/` 内生成 zip（含 `summary.md`：现象、设备、时间、日志开关原值/新值、用途、SHA-256），≤24MB；超限生成时间窗摘录包；
-6. 生成 issue 草稿：写 `issue-draft.md`——标题为 `<现象摘要>（<系统版本号>）`，正文含环境/复现/预期与实际/附件清单（**不写 SHA-256**；内网地址不写入）；**在对话中输出草稿全文供复制**；
+6. 生成 issue 草稿：写 `issue-draft.md`——标题为 `<现象摘要>（<build 版本号>）`（如 `CP2A.260605.016`；**不得用 `Android 17` 等 OS 版本代替**），正文含环境/复现/预期与实际/附件清单（**不写 SHA-256**；内网地址不写入）；**在对话中输出草稿全文供复制**；
 7. 取回：包在宿主机 `~/fde-ai-assistant/data/intake/<slug>`，可直接 `scp -r <宿主机用户>@<宿主机IP>:~/fde-ai-assistant/data/intake/<slug> <本机目录>`；助手不代提、不发布。
 
 ## 降级
@@ -40,7 +40,7 @@
 整理规则：
 
 1. 只编辑该 issue 的标题与正文（`gh issue edit`），不关闭、不发评论、不改附件；
-2. **有 bugreport**：标题整理为 `<现象摘要>（<版本号>）`；正文含 现象 / 时间线（发生时间只写范围）/ 环境 / 复现步骤（推测，未确认）/ 预期与实际 / 附件（不写 SHA-256）/ 下次偶现采集建议，并完整保留原始描述；
+2. **有 bugreport**：标题整理为 `<现象摘要>（<build 版本号>）`（如 `CP2A.260605.016`，不得用 `Android 17` 等 OS 版本）；正文含 现象 / 时间线（发生时间只写范围）/ 环境 / 复现步骤（推测，未确认）/ 预期与实际 / 附件（不写 SHA-256）/ 下次偶现采集建议，并完整保留原始描述；
 3. **没有 bugreport（仅文字 + 截图）**：用模型视觉直接读图（无 OCR），在正文增加 **“初步分析（未验证）”**：现象解读、1~3 个可疑组件/方向（结合 component-map，标注推测）、建议补充的证据（如 bugreport、对应子系统日志）；并标注“**无日志证据**”；
 4. marker 防重复整理；不得批量扫描或自动选择新 issue。
 

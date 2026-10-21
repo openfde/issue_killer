@@ -31,18 +31,15 @@ Pi> 采集方式：
 ```text
 用户> A
 
-Pi> 设备：<序列号>；日志开关：log.tag=<当前值>（非 V 将 setprop log.tag V）；
-    采集：setprop log.tag V + bugreport + 截图；现在开始？
+Pi> 设备：<序列号>；采集：bugreport + 截图；现在开始？
     回复“开始采集”（现场复现请回复“复现完成”）。
 ```
 
 ```text
 用户> 开始采集
 
-Pi> 日志开关：log.tag=<原值> → V；正在采集...
-    完成：data/intake/2026-10-21-documentsui-duplicate-window/bugreport-...zip
+Pi> 完成：data/intake/2026-10-21-documentsui-duplicate-window/bugreport-...zip
     文件：bugreport-...zip、screen.png
-    日志开关：log.tag=<原值> → V
     ---- issue-draft.md ----
     ## 现象
     在桌面点击文件图标，会同时打开两个文件窗口，必现。
@@ -59,7 +56,7 @@ Pi> 日志开关：log.tag=<原值> → V；正在采集...
 用户在 GitHub 新建 issue。实际 #496 正文：
 
 ```text
-标题：桌面点击文件图标会打开两个文件窗口（Android 17）
+标题：桌面点击文件图标会打开两个文件窗口（CP2A.260605.016）
 
 ## 现象
 在桌面点击文件图标，会同时打开两个文件窗口，必现。
@@ -283,3 +280,13 @@ A
 A
 （等待开发回复：验证通过 / 仍有问题）
 ```
+
+
+
+PS C:\Users\huyan> adb bugreport
+/data/user_de/0/com.android.shell/files/bugreports/bugreport-fde_arm64-CP2A.260605.016-2026-10-21-03-39-20.zip: 1 file pulled, 0 skipped. 90.4 MB/s (7402273 bytes in 0.078s)
+Bug report copied to C:\Users\huyan\bugreport-fde_arm64-CP2A.260605.016-2026-10-21-03-39-20.zip
+
+PS C:\Users\huyan> adb shell screencap -p /sdcard/screenshot.png
+
+PS C:\Users\huyan> adb pull /sdcard/screenshot.png
