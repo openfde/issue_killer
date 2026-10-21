@@ -12,6 +12,7 @@ class ContainerTests(unittest.TestCase):
             "node:24-bookworm-slim",
             "git gh ca-certificates",
             "ripgrep",
+            "fd-find",
             "repo",
             "adb version",
             "PYTHONDONTWRITEBYTECODE=1",
