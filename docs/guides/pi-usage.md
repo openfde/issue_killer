@@ -76,17 +76,22 @@ python3 automation/openfde_ai_server.py \
 
 ## 取证采集（提 issue 前）
 
-默认只读、最小集：`bugreport` + 截图；录屏仅在明确要求或闪烁/动画类现象时做。产物在 `data/intake/`，不写入 issue 工件、不访问 GitHub。
+交互式采集，先给 A/B/C/D 菜单；默认最小集，全程只读。产物在 `data/intake/`，不写入 issue 工件、不访问 GitHub。
 
 ```text
-/skill:collect-device-evidence 现象：<一句话>；设备：<型号/版本/IP>；开始采集
+/skill:collect-device-evidence 现象：<一句话>；设备：<型号/版本/IP>
 ```
 
-- 已给出设备并说“开始采集/复现完成”= 已确认，直接执行；否则助手只回一行确认（设备 + 命令 + 时机），未确认前不采集；
-- 容器内使用网络 adb：`adb connect <IP>:5555`（Docker 镜像已内置 `adb`；USB 设备默认不映射）；
-- 输出只给 zip/`issue-draft.md` 路径，不打印草稿全文；Docker 取回：`docker cp openfde-ai:/workspace/data/intake/<slug> .`；
-- 连不上设备时给 PC 端命令 3 行以内；D 模式（已有 bugreport/不在现场）不连设备，只校验打包；
-- 全程只读：禁止 root、禁止 `logcat -c`、禁止安装/卸载/改设置。
+- **A. 最小集**（默认）：`bugreport` + 截图；录屏按需；
+- **B. 不采集**：只生成 issue 草稿；
+- **C. 先现场复现**，复现完成后采集；
+- **D. 事后证据**：已有 bugreport，不连设备；
+- 已给设备并说“开始采集/复现完成”= A 且已确认，直接执行；否则一条确认，未确认前不采集；
+- 容器内用网络 adb：`adb connect <IP>:5555`（镜像已内置 `adb`；USB 默认不映射）；
+- 完成后对话中输出**完整 issue 草稿**（供复制）+ zip/文件；
+- 包在宿主机 `~/fde-ai-assistant/data/intake/<slug>`，可直接：
+  `scp -r <宿主机用户>@<宿主机IP>:~/fde-ai-assistant/data/intake/<slug> <本机目录>`；
+- D 模式不连设备；全程只读：禁止 root、禁止 `logcat -c`、禁止安装/卸载/改设置。
 
 **最简 issue + 手动整理**：可以先只提交一句 `偶现…，有 bugreport`（或仅文字+截图），创建后执行整理命令——pi 内 `/skill:enrich-issue-intake 整理问题 #N`，或 shell `bash deploy/enrich-issue.sh N`。整理会规范化标题/正文（时间线只写范围、推测步骤标注未确认、保留原始描述）；**无 bugreport 时**用模型视觉读图并给出“初步分析（未验证）”与建议补充的证据。详见[取证采集](../architecture/intake.md)。偶现问题也可选 D 模式（事后证据：不连设备、只校验打包已有 bugreport）。
 

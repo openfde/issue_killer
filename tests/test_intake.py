@@ -19,7 +19,7 @@ class IntakeTests(unittest.TestCase):
     def test_intake_skill_is_interactive_and_read_only(self):
         content = (ROOT / "skills/collect-device-evidence/SKILL.md").read_text(encoding="utf-8")
 
-        for value in ("bugreport", "screencap", "screenrecord", "data/intake/", "issue-draft", "不写 SHA-256", "系统版本号", "docker cp", "开始采集", "复现完成", "不得执行", "不得自动挑选", "禁止 root", "禁止 `logcat -c`"):
+        for value in ("bugreport", "screencap", "screenrecord", "data/intake/", "issue-draft", "不写 SHA-256", "系统版本号", "scp -r", "开始采集", "复现完成", "不得执行", "不得自动挑选", "禁止 root", "禁止 `logcat -c`", "issue-draft.md 全文"):
             self.assertIn(value, content, value)
 
     def test_removed_planning_skills_and_templates_are_gone(self):
