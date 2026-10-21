@@ -26,6 +26,7 @@ class DockerDeploymentTests(unittest.TestCase):
         self.assertIn("/workspace/.fde-ai", compose)
         self.assertIn("/workspace/data", compose)
         self.assertIn("fde-sources", compose)
+        self.assertIn("data/intake", compose)
         self.assertIn("COPY deploy/run-scan-loop.sh /usr/local/bin/openfde-scan-loop", dockerfile)
 
     def test_scan_loop_has_a_bounded_interval_and_no_docker_systemd_timer(self):

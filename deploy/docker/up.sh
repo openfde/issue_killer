@@ -94,8 +94,9 @@ if [ ! -f "$ROOT/fde-manifests/default.xml" ]; then
 fi
 
 mkdir -p "$ROOT/fde-sources" "$ROOT/data/intake"
+chmod 0777 "$ROOT/data/intake" 2>/dev/null || true
 if [ "$(id -u)" -eq 0 ]; then
-    chmod 0755 "$ROOT/fde-sources" "$ROOT/fde-manifests" "$ROOT/data/intake" 2>/dev/null || true
+    chmod 0755 "$ROOT/fde-sources" "$ROOT/fde-manifests" 2>/dev/null || true
 fi
 
 if [ "$FORCE_SYNC" -eq 1 ]; then

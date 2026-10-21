@@ -28,6 +28,8 @@ class DockerOneClickTests(unittest.TestCase):
             "config/openfde-ai-server.json",
             "fde-manifests",
             "fde-sources",
+            "data/intake",
+            "chmod 0777",
             "--force-sync",
             "docker exec -it openfde-ai",
         ):

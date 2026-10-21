@@ -357,7 +357,7 @@ docker rmi openfde-ai-assistant:pi   # 可选：删除镜像，下次 up 重新�
 - **`sources-sync` 失败**：`docker logs openfde-ai-sources`；检查 GitHub 网络/模块列表；必要时 `FDE_SYNC_MODE=none` 使用已有源码；
 - **模型不可用**：`pi auth check --provider <p> --model <m>`，检查对应 API key / `PI_BASE_URL`；
 - **token 更新不生效**：容器环境变量在创建时固定；重新运行 `./deploy/docker/up.sh`（或 `docker compose up -d --force-recreate`）；
-- **权限**：`sudo usermod -aG docker "$USER"` 后重新登录或 `newgrp docker`；源码同步以 root 写入并 `chmod -R a+rX`，运行服务以 UID 1000 只读访问；
+- **权限**：`sudo usermod -aG docker "$USER"` 后重新登录或 `newgrp docker`；源码同步以 root 写入并 `chmod -R a+rX`，运行服务以镜像内 `agent`（非 root）只读访问源码；`data/intake` 为 0777 宿主目录，采集包可直接 scp；
 - **退出不要用 `Ctrl+C` 停服务**：`Ctrl+C` 通常只中断当前操作；停服务用 `docker compose down`。
 
 ### 4.4 本机交互式安装（可选）
@@ -822,7 +822,7 @@ docker exec -it openfde-ai-shell pi
 
 **Docker 源码/清单权限**
 
-`sources-sync` 以 root 写入并执行 `chmod -R a+rX`；`scanner`/`poller`/`shell` 以 UID 1000 只读访问。若宿主目录由其他属主创建且不可读，请调整目录权限后重新 `up.sh`。
+`sources-sync` 以 root 写入并执行 `chmod -R a+rX`；`scanner`/`poller`/`shell` 以镜像内 `agent`（非 root）只读访问源码。`data/intake` 额外挂载到宿主机 `~/fde-ai-assistant/data/intake`（权限 0777）并直接用于 scp 取回。若宿主目录由其他属主创建且不可读，请调整目录权限后重新 `up.sh`。
 
 **Windows 下 `.pi/skills` 符号链接异常**
 

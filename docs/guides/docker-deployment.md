@@ -40,7 +40,7 @@ docker logs -f openfde-ai-poller
 | `openfde_ai_data` | `/workspace/data`（队列、日志、知识库） |
 | `fde-sources` / `fde-manifests` | 源码与清单 bind mount；运行时只读 |
 
-`scanner` 与 `poller` 共享 `.fde-ai/issues/<编号>/.workflow.lock`，避免同一 issue 并发执行；源码同步以 root 写入，运行服务以 UID 1000 只读访问。
+`scanner` 与 `poller` 共享 `.fde-ai/issues/<编号>/.workflow.lock`，避免同一 issue 并发执行；源码同步以 root 写入，运行服务以镜像内 `agent`（非 root）只读访问。`data/intake` 额外挂载到宿主机 `~/fde-ai-assistant/data/intake`（0777），采集包可直接 scp 取回。
 
 ## 停止与清理
 
@@ -63,6 +63,6 @@ docker rmi openfde-ai-assistant:pi   # 可选：删除镜像，下次 up 重新�
 - `read:org` 告警：补经典 PAT 的 `read:org` 或 fine-grained Organization Members `Read`，重新授权后重建；
 - 模型不可用：`pi auth check --provider <p> --model <m>`，检查对应 API key / `PI_BASE_URL`；
 - 交互 Pi 仍是旧技能：退出并重新 `docker exec -it openfde-ai pi`（新进程）；
-- 源码权限：确认 bind mount 对 UID 1000 可读，或重跑 `sources-sync` 的 `chmod -R a+rX`。
+- 源码权限：确认 bind mount 可被容器内 `agent` 读取，或重跑 `sources-sync` 的 `chmod -R a+rX`；`data/intake` 为 0777 宿主目录，采集包从 `~/fde-ai-assistant/data/intake/<slug>` 直接 scp。
 
 安装/镜像加速/首次验证等通用问题见 [README 4.3](../../README.md#43-docker-一键部署推荐)。
