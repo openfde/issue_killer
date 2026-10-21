@@ -6,6 +6,7 @@
 
 | 角色 | 先读 | 再读 |
 | --- | --- | --- |
+| 演示/培训 | [496 端到端 Demo](demos/issue-496-walkthrough.md) | [Pi 交互分析](guides/pi-usage.md) |
 | 日常运行、CLI、查看 patch | [服务器 CLI 使用指南](guides/usage.md) | [Issue 工件目录](architecture/artifact-layout.md) |
 | 使用 Pi 分析单个问题 | [Pi 交互分析](guides/pi-usage.md) | [工作流架构](architecture/workflow.md) |
 | Docker 部署/维护服务器 | [README 4.3 Docker 一键部署](../README.md#43-docker-一键部署推荐) | [Docker 容器运维](guides/docker-deployment.md) |
@@ -14,6 +15,7 @@
 
 ## 当前文档
 
+- [496 端到端 Demo](demos/issue-496-walkthrough.md)：从取证采集、分析、修复方案、PR 到验证的完整对话示例。
 - [服务器 CLI 使用指南](guides/usage.md)：队列、扫描、日志与 patch（安装/Pi/Docker 见 README）。
 - [Docker 容器运维](guides/docker-deployment.md)：日常命令、服务与卷、停止清理；完整安装见 README 4.3。
 - [Pi 交互分析](guides/pi-usage.md)：Pi 的 skill 调用细节。

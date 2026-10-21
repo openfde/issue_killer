@@ -840,6 +840,7 @@ pi --version
 
 ## 10. 文档索引
 
+- [496 端到端 Demo](docs/demos/issue-496-walkthrough.md)：从取证到修复 PR 与验证的完整对话示例；
 - [Pi 使用指南](docs/guides/pi-usage.md)：交互命令、分流、回复闭环；
 - [Docker 容器运维](docs/guides/docker-deployment.md)：日常命令、服务与卷、停止清理（完整安装见 4.3）；
 - [服务器 CLI 使用指南](docs/guides/usage.md)：队列、扫描、日志与 patch；
