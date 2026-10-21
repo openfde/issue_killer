@@ -18,7 +18,7 @@ class PullRequestTests(unittest.TestCase):
     def test_skill_creates_a_pull_request_without_merging(self):
         content = (ROOT / "skills/create-fix-pull-request/SKILL.md").read_text(encoding="utf-8")
 
-        for value in ("gh pr create", "github.com/openfde", "fde_17", "只创建", "不合入", "pull_request_created", "data/pr-work", "git apply --check"):
+        for value in ("gh pr create", "github.com/openfde", "fde_17", "只创建", "不合入", "pull_request_created", "data/pr-work", "git apply --check", "统一 diff", "关键 hunk", "不得只给摘要"):
             self.assertIn(value, content, value)
 
     def test_workflow_and_context_allow_the_confirmed_pr_step(self):
@@ -47,6 +47,8 @@ class PullRequestTests(unittest.TestCase):
         content = (ROOT / "skills/draft-issue-comment/SKILL.md").read_text(encoding="utf-8")
         self.assertIn("pull-request.json", content)
         self.assertIn("只创建、未合入、未验证", content)
+        for value in ("问题范围", "证据与定位", "根因（源码来源）", "修复建议（未验证建议，统一 diff）", "完整 unified diff", "当前生效补丁", "本次更新", "not_run"):
+            self.assertIn(value, content, value)
 
     def test_multi_project_fixes_create_one_pull_request_per_project(self):
         content = (ROOT / "skills/create-fix-pull-request/SKILL.md").read_text(encoding="utf-8")

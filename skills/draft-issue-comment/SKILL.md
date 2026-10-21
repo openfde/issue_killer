@@ -7,6 +7,21 @@ description: 当已验证分析、修复方案、patch 建议或缺失信息请�
 
 接收已验证产物或 `needs_information` 记录。只渲染 `.fde-ai/issues/<issue号>/comment/github-comment.md`，包含范围、引用的证据/源码来源、方案或聚焦问题、风险、用户测试说明和全部 `not_run` 项。添加含 issue 编号、revision 和正文哈希的稳定 marker。不得在 `.fde-ai/runs/` 创建新产物。
 
+**修复交付/更新评论的丰富模板（硬性）**：当存在 `patch/0001-*.patch` 或 `patch/pull-request.json` 时，评论必须按以下结构渲染，不得压缩成交付摘要：
+
+1. `## 问题范围`
+2. `## 证据与定位`（E ID、日志时间戳、源码引用）
+3. `## 根因（源码来源）`（`文件:行号`、因果链）
+4. `## 修复建议（未验证建议，统一 diff）`：读取 `.fde-ai/issues/<issue号>/state.json` 的 `patch_file`（或 `patch/0001-*.patch`），把**完整 unified diff 原样**放入 ```diff 代码块；不得只写文件名、行数、修改点摘要或 PR 链接
+5. `## 影响与风险`（影响面/回归面）
+6. `## 建议验证步骤`（人工可执行）
+7. `## 未验证项（not_run）`
+8. `## 修复 PR/MR`（逐个项目链接、分支、base、提交；只创建、未合入、未验证）
+9. `## 验证征询`
+10. 落款与 marker
+
+更新已有 PR 的评论同样使用该模板：先写一小段“本次更新”（如 revert/阈值调整），随后附**当前生效补丁**的完整 diff；不得只发“交付更新”摘要。多项目时引用完整 patch，并在文件/PR 段按项目分组说明。该模板与 `create-fix-pull-request` 的 PR 说明保持一致。
+
 当 `.fde-ai/issues/<issue号>/build/artifacts.json` 存在时，增加“构建验证”段落：target 与 modules、产物名称与 SHA-256、构建时间、日志路径，并注明补丁仅在受控构建期间临时应用、构建后已回滚，设备侧运行与验收仍需用户或 CI 执行。构建缺失或失败时按实际状态如实说明，不得暗示已验证。
 
 当 `.fde-ai/issues/<issue号>/patch/pull-request.json` 存在时，增加“修复 PR/MR”段落：从 `pull_requests` 数组（兼容单对象旧格式）**逐个列出每个项目的 PR 链接**——多项目一行一个（含项目名、分支、base），单项目给一个即可；并明确“只创建、未合入、未验证，由 AI 修复助手生成”。

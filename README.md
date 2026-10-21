@@ -571,7 +571,8 @@ pi
 - 补丁：`patch/0001-<名称>.patch` + `patch.json` + `validation.json`；
 - `create-fix-pull-request` 在独立工作区应用补丁，推送 `ai/issue-<编号>-<slug>` 分支并创建 PR；
 - base 分支 `fde_17`，**只创建、不合入**；多项目修复按项目分别创建 PR；
-- PR 创建/更新后**立即**发布交付/验证征询评论，然后停在 `awaiting_verification`。
+- PR 创建/更新后**立即**发布交付/验证征询评论，然后停在 `awaiting_verification`；
+- 交付评论使用丰富模板，必须包含：问题范围、证据与定位、根因、**完整统一 diff**、影响与风险、验证步骤、`not_run`、PR 链接与验证征询；不得只发交付摘要或省略 diff。
 
 ### 6.7 调试 PR（选择 E 后）
 

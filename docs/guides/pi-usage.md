@@ -197,6 +197,8 @@ python3 automation/openfde_ai_server.py \
 
 `draft-patch` 只生成统一 diff 建议及其 base commit、SHA-256、证据 claim 和 `not_run` 说明。它从不修改源码缓存、执行 `git apply`、构建或测试。
 
+修复交付/更新评论使用丰富模板：问题范围、证据与定位、根因（源码行号）、**完整统一 diff**、影响与风险、建议验证步骤、`not_run`、PR 链接与验证征询；不得只发交付摘要或省略 diff。更新已有 PR 时同样附当前生效补丁的完整 diff。
+
 ```text
 /skill:draft-issue-comment 为当前版本修订生成 GitHub 评论草稿，包含证据/源码引用、补丁建议、风险和用户测试说明；不要发布。
 ```
