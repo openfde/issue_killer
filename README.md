@@ -26,7 +26,7 @@ pi
 
 ```sh
 export GH_TOKEN='...'
-export DEEPSEEK_API_KEY='...'        # 其他模型：PI_PROVIDER/PI_MODEL + 对应 key，可加 PI_BASE_URL
+export DEEPSEEK_API_KEY='...'        # 默认且仅允许 deepseek/deepseek-flash（pro 已禁用）
 ./deploy/docker/up.sh                # 自动生成 .env；首次同步源码模块
 docker exec -it openfde-ai bash      # 进入容器后运行 pi
 ```
@@ -168,8 +168,9 @@ Docker 一键部署时无需手工准备：首次启动的 `sources-sync` 默认
 ```sh
 export GH_TOKEN='<GitHub token>'                 # 无人值守/容器必需；交互式也可用 gh auth login
 export DEEPSEEK_API_KEY='<DeepSeek token>'        # 默认模型；其他模型见下
-export PI_PROVIDER='deepseek'                     # 可选：openai / anthropic / google ...
+export PI_PROVIDER='deepseek'
 export PI_MODEL='deepseek-flash'
+export PI_ENABLED_MODELS='deepseek/deepseek-flash'  # 只允许 flash，避免误用 pro
 # export PI_BASE_URL='https://...'                # OpenAI 兼容网关
 # export OPENAI_API_KEY='...'                     # 按 PI_PROVIDER 选择
 # export ANTHROPIC_API_KEY='...'

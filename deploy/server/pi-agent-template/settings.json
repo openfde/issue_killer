@@ -1,4 +1,5 @@
 {
   "defaultProvider": "deepseek",
-  "defaultModel": "deepseek-flash"
+  "defaultModel": "deepseek-flash",
+  "enabledModels": ["deepseek/deepseek-flash"]
 }

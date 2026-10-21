@@ -52,6 +52,7 @@ services:
       GH_TOKEN: ${GH_TOKEN:-}
       PI_PROVIDER: ${PI_PROVIDER:-deepseek}
       PI_MODEL: ${PI_MODEL:-deepseek-flash}
+      PI_ENABLED_MODELS: ${PI_ENABLED_MODELS:-deepseek/deepseek-flash}
       PI_BASE_URL: ${PI_BASE_URL:-}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
@@ -103,6 +104,7 @@ services:
       GH_TOKEN: ${GH_TOKEN:-}
       PI_PROVIDER: ${PI_PROVIDER:-deepseek}
       PI_MODEL: ${PI_MODEL:-deepseek-flash}
+      PI_ENABLED_MODELS: ${PI_ENABLED_MODELS:-deepseek/deepseek-flash}
       PI_BASE_URL: ${PI_BASE_URL:-}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
@@ -147,6 +149,7 @@ services:
       GH_TOKEN: ${GH_TOKEN:-}
       PI_PROVIDER: ${PI_PROVIDER:-deepseek}
       PI_MODEL: ${PI_MODEL:-deepseek-flash}
+      PI_ENABLED_MODELS: ${PI_ENABLED_MODELS:-deepseek/deepseek-flash}
       PI_BASE_URL: ${PI_BASE_URL:-}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}

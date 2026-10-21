@@ -10,7 +10,7 @@ if [ -d /run/secrets/pi-agent ]; then
 fi
 
 if [ ! -f "$pi_runtime_dir/settings.json" ]; then
-    if python3 -c 'import json, os, sys; json.dump({"defaultProvider": os.environ.get("PI_PROVIDER", "deepseek"), "defaultModel": os.environ.get("PI_MODEL", "deepseek-flash")}, sys.stdout, indent=2)' > "$pi_runtime_dir/settings.json" 2>/dev/null; then
+    if python3 -c 'import json, os, sys; enabled=[m.strip() for m in os.environ.get("PI_ENABLED_MODELS", "deepseek/deepseek-flash").split(",") if m.strip()]; json.dump({"defaultProvider": os.environ.get("PI_PROVIDER", "deepseek"), "defaultModel": os.environ.get("PI_MODEL", "deepseek-flash"), "enabledModels": enabled}, sys.stdout, indent=2)' > "$pi_runtime_dir/settings.json" 2>/dev/null; then
         :
     elif [ -f /opt/pi-agent-template/settings.json ]; then
         cp /opt/pi-agent-template/settings.json "$pi_runtime_dir/settings.json"
