@@ -31,6 +31,7 @@ RUN if curl -fsSL "$REPO_URL" -o /usr/local/bin/repo || curl -fsSL "$REPO_FALLBA
 COPY deploy/docker-entrypoint.sh /usr/local/bin/openfde-entrypoint
 COPY deploy/run-scan-loop.sh /usr/local/bin/openfde-scan-loop
 COPY --chown=agent:agent deploy/server/pi-agent-template/settings.json /opt/pi-agent-template/settings.json
+COPY --chown=agent:agent deploy/server/pi-agent-template/models-store.json /opt/pi-agent-template/models-store.json
 
 RUN chmod 0755 /usr/local/bin/openfde-entrypoint /usr/local/bin/openfde-scan-loop
 

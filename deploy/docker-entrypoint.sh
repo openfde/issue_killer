@@ -17,6 +17,10 @@ if [ ! -f "$pi_runtime_dir/settings.json" ]; then
     fi
 fi
 
+if [ ! -f "$pi_runtime_dir/models-store.json" ] && [ -f /opt/pi-agent-template/models-store.json ]; then
+    cp /opt/pi-agent-template/models-store.json "$pi_runtime_dir/models-store.json"
+fi
+
 export PI_CODING_AGENT_DIR="$pi_runtime_dir"
 
 # 容器内以 agent 读取只读源码树；允许与宿主/同步阶段不同属主的仓库。
