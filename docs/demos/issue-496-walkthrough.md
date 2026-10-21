@@ -1,6 +1,7 @@
 # 496 端到端 Demo：桌面点击文件图标打开两个窗口
 
 > 本文按 issue #496 的实际产物（issue 正文、analysis、solution、patch、PR、交付评论）整理。
+> 496 的实际采集发生在“日志开关预检”加入前；下方按当前流程展示该步骤。
 > 用户输入使用演示用的最短回复；Pi 输出取自实际分析/方案/补丁/评论，关键节点格式按当前工作流。
 
 ## 环境
@@ -30,15 +31,18 @@ Pi> 采集方式：
 ```text
 用户> A
 
-Pi> 设备：<序列号>；采集：bugreport + 截图；现在开始？
+Pi> 设备：<序列号>；日志开关：log.tag=<当前值>（非 V 将 setprop log.tag V）；
+    采集：setprop log.tag V + bugreport + 截图；现在开始？
     回复“开始采集”（现场复现请回复“复现完成”）。
 ```
 
 ```text
 用户> 开始采集
 
-Pi> 完成：data/intake/2026-10-21-documentsui-duplicate-window/bugreport-...zip
+Pi> 日志开关：log.tag=<原值> → V；正在采集...
+    完成：data/intake/2026-10-21-documentsui-duplicate-window/bugreport-...zip
     文件：bugreport-...zip、screen.png
+    日志开关：log.tag=<原值> → V
     ---- issue-draft.md ----
     ## 现象
     在桌面点击文件图标，会同时打开两个文件窗口，必现。

@@ -10,11 +10,12 @@
    - **C. 先现场复现**，复现完成后采集；
    - **D. 事后证据**：已有 bugreport，不连设备；
    已给设备并说“开始采集/复现完成”视为 A 且已确认；
-2. 设备确认（A/C）：`adb devices`；唯一设备直接用，多设备必须人工指定（不得自动挑选）；未确认前只能枚举，不得执行采集命令；
-3. 只读采集：`adb bugreport`、`adb exec-out screencap`、可选 `screenrecord` + `adb pull`；容器内使用网络 adb `adb connect <IP>:5555`；
-4. 打包：`data/intake/<日期>-<slug>/` 内生成 zip（含 `summary.md`：现象、设备、时间、用途、SHA-256），≤24MB；超限生成时间窗摘录包；
-5. 生成 issue 草稿：写 `issue-draft.md`——标题为 `<现象摘要>（<系统版本号>）`，正文含环境/复现/预期与实际/附件清单（**不写 SHA-256**；内网地址不写入）；**在对话中输出草稿全文供复制**；
-6. 取回：包在宿主机 `~/fde-ai-assistant/data/intake/<slug>`，可直接 `scp -r <宿主机用户>@<宿主机IP>:~/fde-ai-assistant/data/intake/<slug> <本机目录>`；助手不代提、不发布。
+2. 设备确认（A/C）：`adb devices`；唯一设备直接用，多设备必须人工指定（不得自动挑选）；未确认前只能枚举（`adb devices`/`getprop log.tag`），不得执行 `setprop` 或采集命令；
+3. 日志开关预检（A/C，抓日志前）：`getprop log.tag`；非 `V`/`VERBOSE` 时执行 `setprop log.tag V` 并复核；失败则停止。设备使用 per-tag 时改用 `getprop log.tag.<TAG>`/`setprop log.tag.<TAG> V`（如 `DocumentsUI`、`ActivityTaskManager`、`WindowManager`）。这是本流程唯一允许的写操作，确认门需列出；
+4. 采集（除日志开关外只读）：`adb bugreport`、`adb exec-out screencap`、可选 `screenrecord` + `adb pull`；容器内使用网络 adb `adb connect <IP>:5555`；
+5. 打包：`data/intake/<日期>-<slug>/` 内生成 zip（含 `summary.md`：现象、设备、时间、日志开关原值/新值、用途、SHA-256），≤24MB；超限生成时间窗摘录包；
+6. 生成 issue 草稿：写 `issue-draft.md`——标题为 `<现象摘要>（<系统版本号>）`，正文含环境/复现/预期与实际/附件清单（**不写 SHA-256**；内网地址不写入）；**在对话中输出草稿全文供复制**；
+7. 取回：包在宿主机 `~/fde-ai-assistant/data/intake/<slug>`，可直接 `scp -r <宿主机用户>@<宿主机IP>:~/fde-ai-assistant/data/intake/<slug> <本机目录>`；助手不代提、不发布。
 
 ## 降级
 

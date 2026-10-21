@@ -485,7 +485,7 @@ cp config/openfde-ai-server.example.json config/openfde-ai-server.json
 
 ### 6.1 取证（提 issue 前）
 
-交互式采集，先给 A/B/C/D 菜单，默认最小集；全程只读：
+交互式采集，先给 A/B/C/D 菜单，默认最小集；除日志开关 `setprop` 外只读：
 
 ```text
 /skill:collect-device-evidence 现象：<一句话>；设备：<型号/版本/IP>
@@ -496,6 +496,7 @@ cp config/openfde-ai-server.example.json config/openfde-ai-server.json
 - **C. 先现场复现**，复现完成后再采集；
 - **D. 事后证据**：已有 bugreport，不连设备；
 - 已给设备并说“开始采集/复现完成”= A 且已确认，直接执行；否则一条确认，未确认前不采集；
+- 抓日志前先 `getprop log.tag`；非 `V`/`VERBOSE` 先 `setprop log.tag V`（确认门列出，唯一允许的写操作；失败则停止）；
 - 容器内使用网络 adb：`adb connect <IP>:5555`（镜像已内置 `adb`；USB 默认不映射）；
 - 完成后对话中输出**完整 issue 草稿**（供复制）+ zip/文件；包在宿主机 `~/fde-ai-assistant/data/intake/<slug>`，可直接：
   `scp -r <宿主机用户>@<宿主机IP>:~/fde-ai-assistant/data/intake/<slug> <本机目录>`；
