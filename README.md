@@ -305,6 +305,7 @@ docker logs -f openfde-ai-poller     # 回复轮询
 docker exec -it openfde-ai bash
 pi --version
 rg --version
+adb version
 gh auth status
 pi auth check --provider deepseek --model deepseek-flash
 ls .pi/skills | wc -l                 # 34
@@ -315,6 +316,7 @@ pi
 
 - `gh auth status` 提示缺少 `read:org` 不影响 issue 读取；补 scope 后重建容器即可。
 - 模型调用返回 `OK` 表示 provider/key 正常；其他模型替换 `--provider/--model`。
+- `adb` 已内置；容器内使用网络 adb（`adb connect <IP>:5555`）。USB 设备需要额外 device 映射，默认不启用。
 
 容器内跑一条只读 skill 验证：
 
@@ -376,7 +378,7 @@ docker rmi openfde-ai-assistant:pi   # 可选：删除镜像，下次 up 重新�
 | [Pi](https://www.npmjs.com/package/@earendil-works/pi-coding-agent) | 交互式分析与 skill 执行 |
 | [GitHub CLI `gh`](https://cli.github.com/) | 读取 issue、下载附件、发布评论、创建 PR |
 | `ripgrep`（`rg`） | 源码检索（工作流强制使用） |
-| `adb`（可选） | 取证采集（只读） |
+| `adb` | 取证采集（只读；Docker 镜像已内置） |
 
 ```sh
 sudo apt update
@@ -485,15 +487,16 @@ cp config/openfde-ai-server.example.json config/openfde-ai-server.json
 
 ### 6.1 取证（提 issue 前）
 
-交互式采集，默认 bugreport + 截屏（录屏可选），全程只读：
+交互式采集，默认 `bugreport` + 截屏；全程只读。录屏只在明确要求或闪烁/动画类现象时做：
 
 ```text
-/skill:collect-device-evidence 现象：<一句话>；设备：<型号/版本/IP>；复现时间：<时刻>
+/skill:collect-device-evidence 现象：<一句话>；设备：<型号/版本/IP>；开始采集
 ```
 
-- 助手先 `adb connect` 并列设备，**收到明确确认前不采集**；
-- 产物在 `data/intake/`，含 `issue-draft.md` 与附件打包；
-- 偶现/离线场景可用 D 模式（事后证据：只校验已有 bugreport，不连设备）。
+- 已给出设备并说“开始采集/复现完成” = 已确认，直接执行；否则助手只回一行确认（设备 + 命令 + 时机），未确认前不采集；
+- 容器内使用网络 adb：`adb connect <IP>:5555`（镜像已内置 `adb`；USB 设备默认不映射）；
+- 产物在 `data/intake/`，输出只给 zip 路径/大小与 `issue-draft.md` 路径，不打印草稿全文；Docker 取回：`docker cp openfde-ai:/workspace/data/intake/<slug> .`；
+- 偶现/离线场景走 D 模式（事后证据：只校验已有 bugreport，不连设备）。
 
 ### 6.2 整理最简 issue（手动）
 
@@ -837,7 +840,7 @@ pi --version
 - [Docker 容器运维](docs/guides/docker-deployment.md)：日常命令、服务与卷、停止清理（完整安装见 4.3）；
 - [服务器 CLI 使用指南](docs/guides/usage.md)：队列、扫描、日志与 patch；
 - [工作流架构](docs/architecture/workflow.md)：状态机、置信度分流、安全边界；
-- [取证采集](docs/architecture/intake.md)：A/B/C/D 采集模式与体积约束；
+- [取证采集](docs/architecture/intake.md)：默认最小集、事后证据与体积约束；
 - [组件归属](docs/architecture/component-attribution.md)：三层归属与人工回退；
 - [Issue 工件目录](docs/architecture/artifact-layout.md)：产物格式与 patch 入口；
 - [服务器部署](docs/guides/server-deployment.md)：systemd 服务账户与定时器；

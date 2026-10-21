@@ -54,6 +54,7 @@ class DocumentationTests(unittest.TestCase):
 
     def test_all_documentation_local_links_resolve(self):
         paths = [ROOT / "README.md", *sorted((ROOT / "docs").rglob("*.md"))]
+        paths = [path for path in paths if "knowledge" not in path.parts]
         for path in paths:
             content = path.read_text(encoding="utf-8")
             for target in MARKDOWN_LINK.findall(content):

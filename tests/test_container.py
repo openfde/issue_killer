@@ -13,6 +13,7 @@ class ContainerTests(unittest.TestCase):
             "git gh ca-certificates",
             "ripgrep",
             "repo",
+            "adb version",
             "PYTHONDONTWRITEBYTECODE=1",
             "openfde-scan-loop",
         ):

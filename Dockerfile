@@ -9,6 +9,8 @@ ARG NPM_REGISTRY=https://registry.npmjs.org
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
        python3 python-is-python3 git gh ca-certificates curl ripgrep util-linux \
+    && (apt-get install -y --no-install-recommends adb || apt-get install -y --no-install-recommends android-tools-adb) \
+    && adb version \
     && npm config set registry "$NPM_REGISTRY" \
     && npm install --global --no-audit --no-fund @earendil-works/pi-coding-agent@0.84.2 \
     && useradd --create-home --shell /bin/sh agent \
