@@ -10,7 +10,7 @@ class ContainerTests(unittest.TestCase):
 
         for value in (
             "node:24-bookworm-slim",
-            "git gh ca-certificates",
+            "git openssh-client gh ca-certificates",
             "ripgrep",
             "fd-find",
             "repo",

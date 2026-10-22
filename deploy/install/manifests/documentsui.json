@@ -1,0 +1,7 @@
+{
+  "module": "DocumentsUI",
+  "source": "/workspace/data/artifacts/496/DocumentsUI.apk",
+  "artifact": "/home/huyang/fde-artifacts/496/DocumentsUI.apk",
+  "image": "system",
+  "dest": "/system/priv-app/DocumentsUI/DocumentsUI.apk"
+}

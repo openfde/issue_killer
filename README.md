@@ -63,7 +63,7 @@ docker exec -it openfde-ai bash      # 进入容器后运行 pi
 - 不自动合入/关闭 PR，不关闭 issue；
 - 不把补丁、PR 或 AI 分析声称为“已验证”；
 - 不在 issue、JSON、日志或代码中写入任何凭据；
-- 默认不构建（`build.enabled=false`）；构建通道只能由授权助手在受控构建树内临时应用补丁并在退出前回滚。
+- 构建+安装由 profile `build.enabled`/`build.install` 控制；Docker 推荐使用 `deploy/docker/build-install.sh`（支持 PR/无 PR），详见 [构建与安装助手](docs/guides/build-install.md)。
 
 ## 2. 工作流一览
 
@@ -436,7 +436,8 @@ Docker 安装验证见 [4.3](#43-docker-一键部署推荐)。
 | --- | --- | --- |
 | `github.repository` | `openfde/openfde` | issue 仓库 |
 | `sources.mode` / `path` | `local_tree` / `fde-sources` | 只读源码树 |
-| `build.enabled` | `false` | 构建通道默认关闭 |
+| `build.enabled` | `true` | 启用构建+安装通道 |
+| `build.install` | `true` | 构建后安装并启动 FDE |
 | `intake.size_budget_mb` | `24` | 附件预算（GitHub 25MB 限制） |
 | `publication.interaction_comments` | `pr_only` | 过程评论仅限 PR / 分析选项等明确类型 |
 | `publication.analysis_options_comment` | `auto` | 原因链+修复选项回复 |
@@ -628,7 +629,47 @@ docker logs -f openfde-ai-poller
 
 服务器 CLI、队列、日志与 systemd 的完整命令见 [服务器 CLI 使用指南](docs/guides/usage.md) 与 [服务器部署](docs/guides/server-deployment.md)。Docker 用户直接使用 4.3 的 `scanner`/`poller`，不需要本节。
 
-### 6.11 受控构建（可选，默认关闭）
+### 6.11 构建+安装（Docker 单命令）
+
+Docker 用户可直接构建并安装到 FDE。issue 模式默认读取最新 PR 并自动匹配模块。
+
+```sh
+cd ~/fde-ai-assistant
+
+# issue 最新 PR + 自动模块
+./deploy/docker/build-install.sh --issue 496
+
+# 多模块（逐个构建/安装，最后只启动一次 FDE）
+./deploy/docker/build-install.sh --issue 496 --module DocumentsUI --module libinput --no-pr
+
+# 指定分支（不应用 PR，构建后恢复原分支）
+./deploy/docker/build-install.sh --module DocumentsUI --no-pr --branch <branch>
+
+# 显式 PR
+./deploy/docker/build-install.sh --issue 496 --module DocumentsUI --pr 3
+```
+
+- `--jobs auto`（默认）按模块映射的 `jobs` 选线程，`--jobs N` 强制覆盖
+- `--no-pr` / `--branch`：不应用 PR；`--branch` 构建后恢复原分支
+- `--no-install`：只构建并取回产物；`--no-start`：安装但不启动 FDE
+- 多模块逐个构建/安装，最后只启动一次 FDE
+- 当前 shell 未激活 docker 组时使用 `sg docker -c '...'`
+
+完整参数、模块映射和流程见 [构建与安装助手](docs/guides/build-install.md)。
+
+Pi 内：
+
+```text
+/skill:build-install --issue 496
+/skill:build-install --issue 496 --module DocumentsUI --module libinput --no-pr
+/skill:build-install 编译安装BoringdroidSystemUI
+```
+
+`BoringdroidSystemUI` 是 `FdeSystemUI` 的别名；自然语言会映射到对应模块和参数。
+
+工作流：`build.install=true` 时在交付评论后停【构建+安装】，A=最新 PR/默认模块，B=自定义模块/PR/分支，C=跳过。
+
+### 6.11.1 旧手工构建（build.install=false，兼容）
 
 仅当 profile `build.enabled=true` 时进入构建通道：
 
@@ -650,7 +691,7 @@ deploy/server/fde-ai-build.sh --issue <编号>
 python3 -m unittest discover -s tests -p "test_*.py"
 ```
 
-当前基线 87 个测试全部通过。
+当前基线 91 个测试全部通过。
 
 ### 6.13 知识沉淀（可选）
 
@@ -850,6 +891,7 @@ pi --version
 - [取证采集](docs/architecture/intake.md)：A/B/C/D 采集模式与体积约束；
 - [组件归属](docs/architecture/component-attribution.md)：三层归属与人工回退；
 - [Issue 工件目录](docs/architecture/artifact-layout.md)：产物格式与 patch 入口；
+- [构建与安装助手](docs/guides/build-install.md)：issue 最新 PR、多模块、分支、自动线程、FDE 启动；
 - [服务器部署](docs/guides/server-deployment.md)：systemd 服务账户与定时器；
 - [aosp17-ai 容器部署](deploy/server/README.md)：容器与受控构建助手；
 - [服务器工作进程](docs/architecture/server-worker.md)：队列、并发与 Pi 进程语义。

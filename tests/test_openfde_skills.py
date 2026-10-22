@@ -31,6 +31,7 @@ class OpenFdeSkillsTests(unittest.TestCase):
             "enrich-issue-intake",
             "request-build",
             "collect-build-artifacts",
+            "build-install",
             "collect-device-evidence",
             "draft-issue-comment",
             "publish-policy-comment",

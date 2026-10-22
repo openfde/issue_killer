@@ -11,7 +11,7 @@ RUN sed -i "s|deb.debian.org|$DEBIAN_MIRROR|g" /etc/apt/sources.list.d/debian.so
     sed -i "s|deb.debian.org|$DEBIAN_MIRROR|g" /etc/apt/sources.list 2>/dev/null || true; \
     apt-get update \
     && apt-get install -y --no-install-recommends \
-       python3 python-is-python3 git gh ca-certificates curl ripgrep fd-find util-linux \
+       python3 python-is-python3 git openssh-client gh ca-certificates curl ripgrep fd-find util-linux \
     && (apt-get install -y --no-install-recommends adb || apt-get install -y --no-install-recommends android-tools-adb) \
     && adb version \
     && ln -sf /usr/bin/fdfind /usr/local/bin/fd \

@@ -18,18 +18,21 @@ class ArtifactLayoutTests(unittest.TestCase):
             ["input", "evidence", "analysis", "solution", "patch", "build", "comment", "archive"],
         )
 
-    def test_profile_declares_the_local_tree_sources_and_manual_build_channel(self):
+    def test_profile_declares_the_local_tree_sources_and_assist_build_channel(self):
         profile = json.loads((ROOT / "profiles/openfde/profile.json").read_text(encoding="utf-8"))
 
         self.assertEqual(profile["sources"]["mode"], "local_tree")
         self.assertTrue(profile["sources"]["read_only"])
         build = profile["build"]
-        self.assertFalse(build["enabled"])
-        self.assertEqual(build["mode"], "manual")
+        self.assertTrue(build["enabled"])
+        self.assertTrue(build["install"])
+        self.assertEqual(build["mode"], "assist")
+        self.assertEqual(build["command"], "deploy/assist/build-install.sh")
+        self.assertEqual(build["module_map"], "deploy/assist/modules.json")
         self.assertEqual(build["helper"], "deploy/server/fde-ai-build.sh")
-        self.assertEqual(build["tree"], "fde-build")
-        self.assertIn("systemimage", build["modules"])
-        self.assertIn("vendorimage", build["modules"])
+        self.assertEqual(build["tree"], "/aosp4/hy_fde17")
+        self.assertEqual(build["target"], "fde_arm64-cp2a-user")
+        self.assertIn("DocumentsUI", build["modules"])
         self.assertTrue(all(item.startswith("target/product/") for item in build["artifacts"]))
 
     def test_active_workflow_documents_one_patch_entrypoint_and_forbids_runs(self):

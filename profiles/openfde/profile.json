@@ -17,20 +17,28 @@
     "read_only": true
   },
   "build": {
-    "enabled": false,
-    "mode": "manual",
+    "enabled": true,
+    "install": true,
+    "mode": "assist",
     "helper": "deploy/server/fde-ai-build.sh",
-    "tree": "fde-build",
+    "command": "deploy/assist/build-install.sh",
+    "module_map": "deploy/assist/modules.json",
+    "host": "10.31.62.29",
+    "tree": "/aosp4/hy_fde17",
     "sources_tree": "fde-sources",
     "lock": "data/build.lock",
-    "target": "fde_arm64-cp2a-userdebug",
+    "target": "fde_arm64-cp2a-user",
+    "product": "fde_arm64",
     "output": "out",
-    "modules": ["systemimage", "vendorimage"],
+    "modules": ["DocumentsUI"],
     "artifacts": [
-      "target/product/fde_arm64/system.img",
-      "target/product/fde_arm64/vendor.img"
+      "target/product/fde_arm64/system/priv-app/DocumentsUI/DocumentsUI.apk"
     ],
-    "max_jobs": 12
+    "max_jobs": 4,
+    "install_host": "10.31.62.247",
+    "installer": "/usr/local/sbin/fde-install-module",
+    "ssh_key": "/workspace/data/ssh/id_ed25519",
+    "known_hosts": "/workspace/data/ssh/known_hosts"
   },
   "intake": {
     "root": "data/intake",

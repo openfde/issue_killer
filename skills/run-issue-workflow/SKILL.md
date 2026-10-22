@@ -11,7 +11,7 @@ description: 当交互用户希望通过原子 skill 启动、恢复或检查一
 
 允许的顺序为 `load-project-profile` → `build-project-context` → `fetch-github-issue` → 一个证据分支 → `resolve-manifest-components`（低置信时经 `confirm-component-mapping` 人工确认）→ `cache-provenanced-sources` → `retrieve-knowledge` → `trace-evidence-to-source` → `verify-analysis` → `propose-fix`（生成候选方案并计算 `fix_confidence`）→ **置信度分流**：
 
-- `score ≥ triage.auto_pr_min_confidence`（默认 70）：`draft-patch` / `validate-patch-artifact` → 可选 `create-fix-pull-request`（人工确认；只创建/更新 PR、不合入主分支）→ `draft-issue-comment` → `publish-policy-comment`（**交付/验证征询评论必须立即发布到 issue**）→ **仅当 `build.enabled=true` 时** `request-build` → `collect-build-artifacts` → `awaiting_verification` →（回复轮询）→ `confirmed_fixed` → `archive-case`；
+- `score ≥ triage.auto_pr_min_confidence`（默认 70）：`draft-patch` / `validate-patch-artifact` → 可选 `create-fix-pull-request`（人工确认；只创建/更新 PR、不合入主分支）→ `draft-issue-comment` → `publish-policy-comment`（**交付/验证征询评论必须立即发布到 issue**）→ **仅当 `build.enabled=true` 时**：`build.install=true` 时在交付评论后进入【构建+安装】节点（A/B/C；A 执行 `deploy/assist/build-install.sh --issue <编号> --module <模块> [--pr <PR编号>]`，成功后 `awaiting_verification`；不自动合并/关闭）；`build.install=false` 时 `request-build` → `collect-build-artifacts` → `awaiting_verification` →（回复轮询）→ `confirmed_fixed` → `archive-case`；
 - `triage.analysis_reply_min_confidence ≤ score < triage.auto_pr_min_confidence`（默认 50–69）：`draft-analysis-options`（**同一轮生成草案**：原因链 + A/B/C + D/E/F 选项）→ **停在分流节点等待确认** → 确认后 `publish-policy-comment`（`analysis-options`）→ `awaiting_direction`；
 - `score < triage.analysis_reply_min_confidence`（默认 <50）：分析助手深度分析（最多 `triage.max_deep_analysis_rounds` 轮，默认 2）→ 仍不足则 `draft-analysis-options`（结论 + 缺口 + D/E/F 调查选项）→ **停在分流节点等待确认** → 发布后 `awaiting_direction`。
 
@@ -88,7 +88,13 @@ C. 暂停本轮
 
 **耗时预算（求助触发）**：同一目标（定位组件、根因或某个符号）连续探索约 **10 分钟**、或多次检索仍无进展时，必须停下调用 `escalate-issue`：列出已掌握线索、已排除项与候选方向（A/B/C），请开发人员指方向；不得无限期硬耗。外部/搜索命令一律带 `timeout`（建议 ≤300 秒）与结果上限。
 
-**构建通道默认关闭**：`build.enabled` 非 true 时，不得调用 `request-build`，也不得进入 `build_requested`/`build_failed`；历史状态若停在 `build_requested`，继续时视为已跳过，直接进入交付评论流程（`draft-issue-comment` → `publish-policy-comment`）。启用后（`build.enabled=true`）只允许通过 profile `build.helper` 声明的授权助手执行：`manual`（默认）只写 `build/build-request.json` 并停在 `build_requested`，等待人工运行助手；`auto` 才可调用助手。助手在受控构建树内临时应用 patch，构建后必须回滚，不得手工修改源码、应用 diff 或运行构建命令。`build_requested` 期间不得重复构建；`build_failed` 时记录失败并停止，交由人工处理。
+**构建+安装（build.install=true，优先）**：交付评论发布后停【构建+安装】节点，给 A/B/C：
+- A. 编译安装该 issue 的最新 PR（默认模块；可多模块）：执行 `deploy/assist/build-install.sh --issue <编号>`；成功后记录 `build/build-result.json`/`build/install-result.json`，`state=awaiting_verification`；不自动合并 PR、不关闭 issue。
+- B. 自定义模块/PR/分支：询问模块、`--pr`/`--no-pr`/`--branch`、是否只构建；再执行同一命令。
+- C. 跳过构建安装，保持 `awaiting_verification` 或停止本轮。
+命令支持 `--module` 重复/逗号分隔、`--jobs auto|N`、`--no-install`、`--no-start`。构建或安装失败时记录原因，停在 `build_failed` 或等待人工，不自动重试。
+
+**旧构建通道（build.install=false）**：`build.enabled` 非 true 时，不得调用 `request-build`，也不得进入 `build_requested`/`build_failed`；历史状态若停在 `build_requested`，继续时视为已跳过，直接进入交付评论流程（`draft-issue-comment` → `publish-policy-comment`）。启用后（`build.enabled=true`）只允许通过 profile `build.helper` 声明的授权助手执行：`manual`（默认）只写 `build/build-request.json` 并停在 `build_requested`，等待人工运行助手；`auto` 才可调用助手。助手在受控构建树内临时应用 patch，构建后必须回滚，不得手工修改源码、应用 diff 或运行构建命令。`build_requested` 期间不得重复构建；`build_failed` 时记录失败并停止，交由人工处理。
 
 组件归属低置信或存在并列候选时，`resolve-manifest-components` 停在 `component_review_requested` 并写 `analysis/component-review.json`；必须由开发人员给出结论，再由 `confirm-component-mapping` 写入最终映射并沉淀到组件映射知识，然后继续。评审前不得自行猜测归属或重复检索。
 

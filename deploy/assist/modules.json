@@ -1,0 +1,75 @@
+{
+  "DocumentsUI": {
+    "project": "packages/apps/DocumentsUI",
+    "repository": "openfde/packages_apps_documentsui",
+    "artifact": "system/priv-app/DocumentsUI/DocumentsUI.apk",
+    "image": "system",
+    "dest": "/system/priv-app/DocumentsUI/DocumentsUI.apk",
+    "kind": "apk",
+    "jobs": 4
+  },
+  "SystemUI": {
+    "project": "frameworks/base",
+    "repository": "openfde/frameworks_base",
+    "artifact": "system/system_ext/priv-app/SystemUI/SystemUI.apk",
+    "image": "system",
+    "dest": "/system/system_ext/priv-app/SystemUI/SystemUI.apk",
+    "kind": "apk",
+    "jobs": 8
+  },
+  "FdeSystemUI": {
+    "aliases": ["BoringdroidSystemUI", "boringdroidsystemui"],
+    "project": "packages/apps/BoringdroidSystemUI",
+    "repository": "openfde/boringdroidsystemui",
+    "artifact": "system/system_ext/priv-app/FdeSystemUI/FdeSystemUI.apk",
+    "image": "system",
+    "dest": "/system/system_ext/priv-app/FdeSystemUI/FdeSystemUI.apk",
+    "kind": "apk",
+    "jobs": 8
+  },
+  "services": {
+    "project": "frameworks/base",
+    "repository": "openfde/frameworks_base",
+    "artifact": "system/framework/services.jar",
+    "image": "system",
+    "dest": "/system/framework/services.jar",
+    "kind": "jar",
+    "jobs": 8
+  },
+  "libandroid_servers": {
+    "project": "frameworks/base",
+    "repository": "openfde/frameworks_base",
+    "artifact": "system/lib64/libandroid_servers.so",
+    "image": "system",
+    "dest": "/system/lib64/libandroid_servers.so",
+    "kind": "native",
+    "jobs": 8
+  },
+  "libinput": {
+    "project": "frameworks/native",
+    "repository": "openfde/frameworks_native",
+    "artifact": "system/lib64/libinput.so",
+    "image": "system",
+    "dest": "/system/lib64/libinput.so",
+    "kind": "native",
+    "jobs": 4
+  },
+  "libinputreader": {
+    "project": "frameworks/native",
+    "repository": "openfde/frameworks_native",
+    "artifact": "system/lib64/libinputreader.so",
+    "image": "system",
+    "dest": "/system/lib64/libinputreader.so",
+    "kind": "native",
+    "jobs": 4
+  },
+  "libinputflinger": {
+    "project": "frameworks/native",
+    "repository": "openfde/frameworks_native",
+    "artifact": "system/lib64/libinputflinger.so",
+    "image": "system",
+    "dest": "/system/lib64/libinputflinger.so",
+    "kind": "native",
+    "jobs": 4
+  }
+}
