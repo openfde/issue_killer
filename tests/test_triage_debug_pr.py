@@ -23,7 +23,7 @@ class TriageDebugPrTests(unittest.TestCase):
         self.assertFalse(debug["merge"])
 
         for key in ("reproduction_plan_comment", "debug_pr_comment"):
-            self.assertEqual(profile["publication"][key], "auto")
+            self.assertEqual(profile["publication"][key], "manual")
 
     def test_propose_fix_produces_a_confidence_score(self):
         content = (ROOT / "skills/propose-fix/SKILL.md").read_text(encoding="utf-8")
