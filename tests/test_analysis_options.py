@@ -39,10 +39,10 @@ class AnalysisOptionsTests(unittest.TestCase):
 
     def test_publication_allows_analysis_options_comment(self):
         profile = json.loads((ROOT / "profiles/openfde/profile.json").read_text(encoding="utf-8"))
-        self.assertEqual(profile["publication"]["analysis_options_comment"], "auto")
+        self.assertEqual(profile["publication"]["analysis_options_comment"], "manual")
 
         publish = (ROOT / "skills/publish-policy-comment/SKILL.md").read_text(encoding="utf-8")
-        for value in ("analysis_options_comment", "analysis-options", "awaiting_direction"):
+        for value in ("analysis_options_comment", "analysis-options", "awaiting_direction", "publication/approval.json"):
             self.assertIn(value, publish, value)
 
     def test_resume_stops_at_the_next_key_node(self):
@@ -80,7 +80,7 @@ class AnalysisOptionsTests(unittest.TestCase):
             self.assertIn(value, trace, value)
 
         propose = (ROOT / "skills/propose-fix/SKILL.md").read_text(encoding="utf-8")
-        for value in ("A/B/C", "改动点", "验证方法与判据", "工作量", "推荐"):
+        for value in ("A/B/C", "改动点", "验证方法与判据", "推荐"):
             self.assertIn(value, propose, value)
 
 

@@ -1,13 +1,13 @@
 ---
 name: run-issue-workflow
-description: 当交互用户希望通过原子 skill 启动、恢复或检查一个已配置的 issue 分析 run 时使用。
+description: 当交互用户明确要求启动、推进或检查一个已配置的 issue 分析 run 时使用；单纯说“继续 <编号>”只读状态，不启动分析。
 ---
 
 # 运行单个 issue 工作流
 
 这是一个薄编排器。开始前必须取得当前调用方显式指定的问题编号或完整 URL；人工 Pi 会话中必须来自当前用户请求，服务器模式中必须来自受信任的服务器队列。缺少指定时只返回“请选择问题”，不得创建运行目录、访问 GitHub 或下载任何内容。不得从问题列表、旧产物或上下文自行选择。
 
-选择检查通过后，先初始化唯一目录 `.fde-ai/issues/<issue号>/` 及其 `input/`、`evidence/`、`analysis/`、`solution/`、`patch/`、`build/`、`comment/`、`archive/` 子目录，并在根目录**先写入** `state.json`：唯一状态字段名为 `state`，初始值为 `initialized`，同时记录 issue 编号、revision、profile SHA-256 与更新时间。不得使用 `status` 代替 `state`。然后加载项目配置、构建项目上下文、检查 `state.json`，恰好调用一个有效的原子 skill。该 skill 完成后重新读取并校验产物/状态；仅在调用方要求继续处理时重复。服务器协调器会对同一受信任 issue 自动发起后续调用，直到终态。任何后续技能都只可处理已明确选择的同一编号。唯一 patch 入口是 `.fde-ai/issues/<issue号>/patch/0001-<名称>.patch`；不得在 `.fde-ai/runs/` 创建新产物。
+选择检查通过后，先初始化唯一目录 `.fde-ai/issues/<issue号>/` 及其 `input/`、`evidence/`、`analysis/`、`solution/`、`patch/`、`build/`、`comment/`、`archive/` 子目录，并在根目录**先写入** `state.json`：唯一状态字段名为 `state`，初始值为 `initialized`，同时记录 issue 编号、revision、profile SHA-256 与更新时间。不得使用 `status` 代替 `state`。然后加载项目配置、构建项目上下文、检查 `state.json`，恰好调用一个有效的原子 skill。该 skill 完成后**必须重新读取 `state.json` 并校验状态是否推进**；若产物已生成但状态未按技能定义推进（例如已有 `evidence/evidence.json` 但仍是 `initialized`/`issue_fetched`），停止并报告状态不一致，不得继续分析或补做后续步骤。仅在调用方要求继续处理时重复。服务器协调器会对同一受信任 issue 自动发起后续调用，直到终态。任何后续技能都只可处理已明确选择的同一编号。唯一 patch 入口是 `.fde-ai/issues/<issue号>/patch/0001-<名称>.patch`；不得在 `.fde-ai/runs/` 创建新产物。
 
 允许的顺序为 `load-project-profile` → `build-project-context` → `fetch-github-issue` → 一个证据分支 → `resolve-manifest-components`（低置信时经 `confirm-component-mapping` 人工确认）→ `cache-provenanced-sources` → `retrieve-knowledge` → `trace-evidence-to-source` → `verify-analysis` → `propose-fix`（生成候选方案并计算 `fix_confidence`）→ **置信度分流**：
 
@@ -32,7 +32,7 @@ description: 当交互用户希望通过原子 skill 启动、恢复或检查一
 
 **硬性停止点（防跑穿）**：
 
-- “继续 <编号>”只允许推进到**下一个关键节点**；输出关键节点汇报后**必须结束本轮**（不得再调用工具、不得继续下一个原子技能）。
+- “继续 <编号>”**只允许只读状态**：读取 `state.json` 与已有产物，报告当前阶段/缺口/下一步 A/B/C；不得调用任何证据、分析、补丁、PR 或构建技能，不得开始分析。只有用户在同一轮明确说“继续分析/推进/执行下一步”，或显式调用 `/skill:run-issue-workflow`，才允许推进；推进时一次只能进入下一个关键节点，输出汇报后**必须结束本轮**（不得再调用工具、不得继续下一个原子技能）。
 - `analysis_verified` 后必须**在同一轮**继续 `propose-fix` 计算 `fix_confidence`（只写方案与分数，不生成补丁），然后停在【根因重点解析与置信度分流】；**不得在同一轮调用 `draft-patch`、`validate-patch-artifact` 或 `create-fix-pull-request`**（`create-debug-pull-request` 仅在选择 E 后）。
 - 分流节点必须**直接给出交付物选项**：50–69 先 `draft-analysis-options` 生成分析回复草案并请用户选择“发布/修改/暂停”；≥70 展示修复方案并请用户选择“生成 PR/只留补丁/暂停”；<50 展示深度分析或 D/E/F 调查选项。**不得只问“是否进入修复方案评估”**。
 - revision 重置或状态为 `initialized` 的首次运行：必须先完成证据提取与分析，再在同一轮完成 `propose-fix` 与分流，在【根因重点解析与置信度分流】停下；不得因用户说“继续”而跳过。
@@ -72,9 +72,16 @@ C. 暂停本轮
 
 **会话恢复规则**：任何会话（含被轮询/服务器唤醒的无人值守运行）继续处理时，必须先重读 `.fde-ai/issues/<issue号>/state.json` 与最新产物，从**当前实际状态**继续；不得依赖旧会话上下文，也不得因上下文与文件不一致而停止。
 
-**继续命令（交互会话，优先使用）**：在会话中说“继续 <编号>”时——先重读 `state.json`；若处于 `awaiting_direction`/`awaiting_verification`，先执行一次 `sync-github-replies` 检查 issue 新回复并据此更新状态；若开发人员在会话中直接给出选择/方向，则将其写入 `analysis/direction.json`（来源标注 `session`）后继续。然后**只推进到下一个关键节点并停下**（见“硬性停止点”；`analysis_verified` 时该节点包含 `propose-fix`、分流与回复草案生成）；该命令对任意中间状态都适用（包括无人值守停下的 `patch_validated` 等）。关键节点的 A/B/C **直接在本会话内询问并等待**，不在 issue 发交互评论（issue 评论仅用于无人值守的 PR 交付与 `analysis-options` 场景）。
+**继续命令（交互会话，优先使用）**：在会话中说“继续 <编号>”时——先重读 `state.json`；**默认只读状态并汇报，不调用任何原子 skill**。只有用户明确说“继续分析/推进/执行下一步”或显式调用 `/skill:run-issue-workflow` 时，才重新读取状态并在必要时执行一次 `sync-github-replies`；若开发人员在会话中直接给出选择/方向，则将其写入 `analysis/direction.json`（来源标注 `session`）后继续。然后**只推进到下一个关键节点并停下**（见“硬性停止点”；`analysis_verified` 时该节点包含 `propose-fix`、分流与回复草案生成）；该命令对任意中间状态都适用（包括无人值守停下的 `patch_validated` 等）。关键节点的 A/B/C **直接在本会话内询问并等待**，不在 issue 发交互评论（issue 评论仅用于无人值守的 PR 交付与 `analysis-options` 场景）。
 
-**无人值守运行的收尾规则**：非交互运行（无会话）中遇到任何需要人工选择的节点——求助、补丁完成后的下一步、验证征询等——**必须停在受监控的等待态**（`awaiting_direction`/`awaiting_verification`），不得只把问题写进日志后停在无监控的中间态（如 `patch_validated`），否则无人能接手。发布规则：默认 `pr_only`——包含 PR 的修复交付/调试 PR 评论可发布；`publication.analysis_options_comment`/`reproduction_plan_comment`/`debug_pr_comment` 为 `auto` 时，对应评论可发布并停在 `awaiting_direction`；`auto` 时求助评论（A/B/C）也发布；`manual` 时任何交互评论都不发布。日志只作为审计记录。
+**分析选项节点的选项（硬性）**：`analysis-options` 草案中的 A/B/C 是**修复路线**，不是发布选项。会话中给出：
+- A/B/C：选择对应修复路线，随后 `draft-patch` → `validate-patch-artifact` → `create-fix-pull-request`（只创建/更新 PR，不发布评论）
+- D：展开复现方案；E：调试 PR；F：深入分析
+- P：发布分析选项评论（仅当用户明确说 P/发布；`publication` 为 `manual` 时默认不发布）
+- Q：暂停
+发布与分析路线必须分开询问；不得把 A 当成“发布”，也不得在用户未选 P 时调用 `publish-policy-comment`。
+
+**无人值守运行的收尾规则**：非交互运行（无会话）中遇到任何需要人工选择的节点——求助、补丁完成后的下一步、验证征询等——**必须停在受监控的等待态**（`awaiting_direction`/`awaiting_verification`），不得只把问题写进日志后停在无监控的中间态（如 `patch_validated`），否则无人能接手。发布规则：默认 `manual`——包含 PR 的修复交付/调试 PR 评论也先生成草稿；分析选项/复现/调试评论必须有用户批准（approval.json）。`auto` 时必须由用户在会话中明确选择发布；`manual` 时任何交互评论都不自动发布。日志只作为审计记录。
 
 **回复轮询（5 分钟）**：`deploy/reply-poll.sh` 按 `replies.poll_seconds`（默认 300 秒）检查 `awaiting_direction`/`awaiting_verification`；无新评论时不启动模型并保持等待；进入 `awaiting_direction` 时写入 `direction_wait_since`，超过 30 分钟仅在日志与下次会话中提示，不自动深挖、不发提醒评论。
 
@@ -82,7 +89,7 @@ C. 暂停本轮
 
 **置信度分流与无法立即修复的交付规则（硬性）**：`propose-fix` 必须给出 `fix_confidence.score`（取根因与修复的较低值）。`score ≥ triage.auto_pr_min_confidence`（默认 70）才允许 `draft-patch` 与 PR；`50–69` 必须在同一轮 `draft-analysis-options` 生成草案，停在分流节点由用户确认后再 `publish-policy-comment`（`analysis-options`）→ `awaiting_direction`；`<50` 先深度分析（最多 2 轮），仍不足则生成调查选项草案并等待确认。在 <70 时**不得自行选择修复路线**，也不得生成补丁/PR。补充判定清单（命中任一，即使自评偏高也必须在回复中列为未证实/需补强）：分析中存在 medium/低置信结论、标注“推断/未证实”、需要复现或插桩、存在 ≥2 条互斥可行路线、改动影响面跨组件。开发选择 A/B/C 后由 `sync-github-replies` 写入 `analysis/direction.json` 再按路线继续；D → `design-reproduction-plan` 展开并追加回复；E → `draft-debug-patch` → `create-debug-pull-request`；F → 继续深度分析。原因链必须是纯技术分析（触发条件、毫秒级时间线、完整因果链、直接/根本原因、容错失效、未证实环节、影响面、排除项），每个结论带证据或源码位置，禁止套话和空泛总结。
 
-**PR 与 issue 的同步规则（硬性）**：`create-fix-pull-request` 创建或更新 PR 后，编排**必须立即执行 `draft-issue-comment` → `publish-policy-comment`**，把该 revision 的交付/验证征询评论发布到 issue（`pr_only` 下这是唯一必发的过程评论）；不得因等待构建、等待人工或其他步骤而延迟。更新已有 PR 时，评论中注明更新后的分支/提交。构建结果若后到，追加一条简短更新评论。
+**PR 与 issue 的同步规则（硬性）**：`create-fix-pull-request` 创建或更新 PR 后，编排**必须立即执行 `draft-issue-comment` 生成评论草稿**；`publish-policy-comment` 仅在用户明确批准后调用（`manual`/`approval.json`）。，把该 revision 的交付/验证征询评论发布到 issue（`pr_only` 下这是唯一必发的过程评论）；不得因等待构建、等待人工或其他步骤而延迟。更新已有 PR 时，评论中注明更新后的分支/提交。构建结果若后到，追加一条简短更新评论。
 
 **人机闭环**：分析受阻（连续排查无高置信结论、证据矛盾、模型自评估无法继续）时调用 `escalate-issue` 生成带 A/B/C 的求助评论（按 `publication.interaction_comments` 可自动发布）并停在 `awaiting_direction`；开发人员的回复（选项、方向或自由文本）由 `sync-github-replies` 轮询读取，写入 `analysis/direction.json` 后带着该方向继续（`direction_received`）。**置信度 <70 时**按“置信度分流与无法立即修复的交付规则”发布原因链+选项（`analysis-options`）并等待开发选择；D 展开复现方案，E 创建调试 PR，F 继续深度分析，A/B/C 回到修复流程；调试日志/复现结果按新证据进入新 revision。交付修复后进入 `awaiting_verification`（评论含“验证征询”段落）：回复“验证通过”→ `confirmed_fixed` → `archive-case`；回复“仍有问题（附新日志/截图）”→ 归档旧 revision、`revision+1`、从 `issue_fetched` 重新分析。issue 关闭始终由人工完成。
 

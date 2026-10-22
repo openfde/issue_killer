@@ -153,8 +153,8 @@ python3 automation/openfde_ai_server.py \
 **重新进入下一轮（推荐用法）**：在 pi 会话里直接说：
 
 ```text
-继续 494
-继续 494；选 A（更新 PR），PAGE_TURN_DISTANCE 用 60
+继续分析 494
+继续分析 494；选 A（更新 PR），PAGE_TURN_DISTANCE 用 60
 ```
 
 （技能有更新时先退出并新开会话，再执行上述命令。）

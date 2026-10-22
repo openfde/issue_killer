@@ -10,8 +10,8 @@ class InteractionLoopTests(unittest.TestCase):
     def test_profile_enables_interaction_comments_and_reply_polling(self):
         profile = json.loads((ROOT / "profiles/openfde/profile.json").read_text(encoding="utf-8"))
 
-        self.assertEqual(profile["publication"]["interaction_comments"], "pr_only")
-        self.assertEqual(profile["publication"]["analysis_options_comment"], "auto")
+        self.assertEqual(profile["publication"]["interaction_comments"], "manual")
+        self.assertEqual(profile["publication"]["analysis_options_comment"], "manual")
         self.assertEqual(profile["replies"]["poll_seconds"], 300)
 
     def test_escalation_skill_publishes_options_and_waits(self):

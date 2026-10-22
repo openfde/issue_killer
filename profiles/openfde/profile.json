@@ -66,10 +66,10 @@
   "publication": {
     "mode": "manual_per_issue",
     "allow_auto_information_requests": true,
-    "interaction_comments": "pr_only",
-    "analysis_options_comment": "auto",
-    "reproduction_plan_comment": "auto",
-    "debug_pr_comment": "auto",
+    "interaction_comments": "manual",
+    "analysis_options_comment": "manual",
+    "reproduction_plan_comment": "manual",
+    "debug_pr_comment": "manual",
     "dry_run": true,
     "minimum_confidence": "high",
     "blocked_labels": ["no-ai-reply"]

@@ -23,7 +23,9 @@
 - 现场 A/C 模式需先恢复 adb 授权；不要用 `waydroid shell` 代替（需要 root）
 - 采集前按当前流程检查 `log.tag`；复现前设置必要的日志级别
 - issue 标题必须带 build 版本（如 `CP2A.260605.016`），不能用 “Android 17” 代替
+- issue 正文必须从 **Markdown 代码围栏**复制，保留 `##`/列表/表格；不要让 Pi/TUI 渲染后再复制
 - 产出：`issue-draft.md` 全文、bugreport、截图、`data/intake/<slug>` 路径
+- 取回只使用宿主机 scp：`scp -r huyang@192.168.227.129:~/fde-ai-assistant/data/intake/<slug> <本机目录>`；禁止 `docker cp`/容器路径
 - 人工创建 issue 后，记录 issue 编号/URL
 
 ## L1：分析

@@ -14,8 +14,8 @@
 3. 日志开关预检（A/C，抓日志前）：`getprop log.tag`；非 `V`/`VERBOSE` 时执行 `setprop log.tag V` 并复核；失败则停止。设备使用 per-tag 时改用 `getprop log.tag.<TAG>`/`setprop log.tag.<TAG> V`（如 `DocumentsUI`、`ActivityTaskManager`、`WindowManager`）。这是本流程唯一允许的写操作，确认门需列出；
 4. 采集（除日志开关外只读）：`adb bugreport`、`adb exec-out screencap`、可选 `screenrecord` + `adb pull`；容器内使用网络 adb `adb connect <IP>:5555`；
 5. 打包：`data/intake/<日期>-<slug>/` 内生成 zip（含 `summary.md`：现象、设备、时间、日志开关原值/新值、用途、SHA-256），≤24MB；超限生成时间窗摘录包；
-6. 生成 issue 草稿：写 `issue-draft.md`——标题为 `<现象摘要>（<build 版本号>）`（如 `CP2A.260605.016`；**不得用 `Android 17` 等 OS 版本代替**），正文含环境/复现/预期与实际/附件清单（**不写 SHA-256**；内网地址不写入）；**在对话中输出草稿全文供复制**；
-7. 取回：包在宿主机 `~/fde-ai-assistant/data/intake/<slug>`，可直接 `scp -r <宿主机用户>@<宿主机IP>:~/fde-ai-assistant/data/intake/<slug> <本机目录>`；助手不代提、不发布。
+6. 生成 issue 草稿：写 `issue-draft.md`——标题为 `<现象摘要>（<build 版本号>）`（如 `CP2A.260605.016`；**不得用 `Android 17` 等 OS 版本代替**），正文含环境/复现/预期与实际/附件清单（**不写 SHA-256**；内网地址不写入）；**在对话中用单独的 Markdown 代码围栏输出正文供复制**（不要让 TUI 渲染后复制）；
+7. 取回：包在宿主机 `~/fde-ai-assistant/data/intake/<slug>`，直接 `scp -r huyang@192.168.227.129:~/fde-ai-assistant/data/intake/<slug> <本机目录>`；**只给宿主机 scp，禁止 `docker cp`/容器内路径**；助手不代提、不发布。
 
 ## 降级
 
