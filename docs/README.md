@@ -22,6 +22,7 @@
 - [服务器 CLI 使用指南](guides/usage.md)：队列、扫描、日志与 patch（安装/Pi/Docker 见 README）。
 - [Docker 容器运维](guides/docker-deployment.md)：日常命令、服务与卷、停止清理；完整安装见 README 4.3。
 - [构建与安装助手](guides/build-install.md)：issue 最新 PR、多模块、分支、自动线程、FDE 启动。
+- [AI Issue 工作流讨论（1 页版）](guides/workflow-discussion.md)：L0–L3 现状、待决策、风险和建议议程。
 - [Pi 交互分析](guides/pi-usage.md)：Pi 的 skill 调用细节。
 - [服务器部署与运维](guides/server-deployment.md)：宿主机 systemd 部署。
 - [工作流架构](architecture/workflow.md)：当前流程、证据/源码边界、补丁与知识沉淀。

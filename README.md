@@ -2,7 +2,7 @@
 
 面向 OpenFDE 的 issue 分析与修复工作流助手：从 GitHub 读取 issue、评论与附件，基于 `fde-manifests` 和只读源码树做源码级因果分析，按修复置信度分流——高置信直接产出修复 PR，中低置信先产出“原因链 + 修复选项”的 issue 回复，必要时提供复现方案或调试插桩 PR。
 
-> 全流程以“未验证建议”为边界：不修改只读源码树、不自动合入 PR、不关闭 issue；所有补丁、PR 与结论均标注 `not_run` / 未验证，由开发人员审阅与验证。
+##### 全流程以“未验证建议”为边界：不修改只读源码树、不自动合入 PR、不关闭 issue；所有补丁、PR 与结论均标注 `not_run` / 未验证，由开发人员审阅与验证。
 
 ## 快速开始
 
@@ -26,7 +26,7 @@ pi
 
 ```sh
 export GH_TOKEN='...'
-export DEEPSEEK_API_KEY='...'        # 默认且仅允许 deepseek/deepseek-flash（pro 已禁用）
+export DEEPSEEK_API_KEY='...'        # 默认 deepseek/deepseek-flash
 ./deploy/docker/up.sh                # 自动生成 .env；首次同步源码模块
 docker exec -it openfde-ai bash      # 进入容器后运行 pi
 ```
@@ -67,32 +67,48 @@ docker exec -it openfde-ai bash      # 进入容器后运行 pi
 
 ## 2. 工作流一览
 
-```mermaid
+```
 flowchart TD
-    A[fetch issue] --> B[证据提取]
+    L0[采集设备证据 / 已有 bugreport<br/>issue 草稿] --> A[fetch issue]
+    A --> B[证据提取]
     B --> C[组件归属 + 只读源码]
     C --> D[源码因果分析 + 校验]
     D --> E[propose-fix + fix_confidence]
-    E -->|>= 70| F[补丁 → PR → 交付/验证评论]
-    E -->|50–69| G[analysis-options 回复<br/>原因链 + A/B/C + D/E/F]
+    E -->|>= 70| F[补丁 → PR（人工确认）]
+    E -->|50–69| G[analysis-options 草案<br/>原因链 + A/B/C + D/E/F]
     E -->|< 50| H[深度分析（最多 2 轮）]
     H --> G
-    F --> I[awaiting_verification]
-    G --> J[awaiting_direction]
-    J -->|A/B/C| F
-    J -->|D| K[复现与验证方案<br/>追加 issue 回复]
-    J -->|E| L[调试插桩 PR<br/>只加日志、不合入]
-    J -->|F| H
+    G --> GP[会话展示草案<br/>A/B/C=修复路线；P=发布；Q=暂停]
+    GP -->|A/B/C| F
+    GP -->|P + 用户批准| PUB[发布 analysis-options]
+    GP -->|D| K[复现与验证方案（人工批准）]
+    GP -->|E| L[调试插桩 PR（人工选择）]
+    GP -->|F| H
+    PUB --> J[awaiting_direction]
+    K --> J
+    L --> J
+    J -->|开发回复 A/B/C| F
+    F --> FC[交付评论草稿<br/>manual / approval]
+    FC -->|build.install=true| BI{构建+安装 A/B/C}
+    FC -->|build.install=false| I[awaiting_verification]
+    BI -->|A 最新 PR| BLD[build-install --issue n]
+    BI -->|B 自定义| BLD2[指定模块/PR/分支]
+    BI -->|C 跳过| I
+    BLD --> INST[安装到 FDE + 启动]
+    BLD2 --> INST
+    INST --> I
     I -->|验证通过| M[confirmed_fixed → archived]
     I -->|仍有问题 + 新日志| A
 ```
+
+验证助手尚未实现；`I` 的验证由人工完成。`M` 只归档，PR 合并和 issue 关闭仍由人工操作；产品配置类修复还应完成 `systemimage` + PR 构建或 A/B 验证。
 
 **置信度分流**
 
 | `fix_confidence` | 处理 |
 | --- | --- |
-| ≥ 70 | 修复助手：补丁 → PR（人工确认）→ 交付/验证征询评论 → `awaiting_verification` |
-| 50–69 | 分析助手：生成 `analysis-options` 草案（原因链 + A/B/C + D/E/F），确认后发布 → `awaiting_direction` |
+| ≥ 70 | 修复助手：补丁 → PR（人工确认）→ 交付评论草稿（manual/approval）→ 构建+安装 A/B/C → `awaiting_verification` |
+| 50–69 | 分析助手：生成 `analysis-options` 草案（原因链 + A/B/C + D/E/F），会话展示；A/B/C=修复路线，P=发布（approval）→ `awaiting_direction` |
 | < 50 | 分析助手深度分析（最多 2 轮）；仍不足则发调查选项 → `awaiting_direction` |
 
 `fix_confidence = min(根因置信度, 修复置信度)`，记录在 `solution/solution.json`；分层锚点见 [Pi 使用指南](docs/guides/pi-usage.md#置信度分流分析助手--修复助手)。
@@ -327,7 +343,7 @@ pi
 
 `config/openfde-ai-server.json` 的 `worker.execute`：
 
-- `true`：扫描并自动分析 issue（会产生模型调用）；
+- `true`：扫描并自动分析 issue（会产生模型调用，暂未调试）；
 - `false`：只发现/入队，不自动分析（验证安装时建议）。
 
 修改后执行：
@@ -490,7 +506,7 @@ cp config/openfde-ai-server.example.json config/openfde-ai-server.json
 交互式采集，先给 A/B/C/D 菜单，默认最小集；除日志开关 `setprop` 外只读：
 
 ```text
-/skill:collect-device-evidence 现象：<一句话>；设备：<型号/版本/IP>
+/skill:collect-device-evidence 现象：<一句话>；xxxxx
 ```
 
 - **A. 最小集**（默认）：`bugreport` + 截图；录屏按需；
@@ -511,6 +527,8 @@ cp config/openfde-ai-server.example.json config/openfde-ai-server.json
 ```sh
 bash deploy/enrich-issue.sh <issue号>
 ```
+
+或：
 
 ```text
 /skill:enrich-issue-intake 整理问题 #<issue号>
@@ -551,14 +569,14 @@ pi
 
 - `继续 <编号>` 默认只读状态；只有 `继续分析 <编号>` 或显式 `/skill:run-issue-workflow` 才推进到**下一个关键节点**并停下；
 - 关键节点默认在终端内给 A/B/C，不刷 issue 评论；
-- `analysis-options`、复现方案、调试 PR 评论例外（见下）。
+- 分析选项、复现方案、调试 PR 评论默认 `manual`，必须有人工 `approval.json`；修复交付评论先生成草稿。
 
 ### 6.5 分流与回复选项
 
 分析校验后自动计算 `fix_confidence`：
 
 - **≥70**：展示修复方案与 A/B/C（生成 PR / 只留补丁 / 暂停）；
-- **50–69**：生成分析回复草案（原因链 + 修复选项 A/B/C + D/E/F），确认后发布到 issue；
+- **50–69**：生成分析回复草案（原因链 + 修复选项 A/B/C + D/E/F），会话展示；P/明确确认并写入 approval 后发布到 issue；
 - **<50**：先深度分析（最多 2 轮），仍不足则发调查选项。
 
 `analysis-options` 回复中的 D/E/F：
@@ -584,7 +602,7 @@ pi
 - 评论包含插桩点、TAG、复现与采集命令（`adb logcat -s openfde<编号>`）、回传要求与移除方式；
 - 当前构建关闭时由开发自行构建/刷机；回传日志按新证据进入新 revision。
 
-### 6.8 回复轮询与验证闭环
+### 6.8 回复轮询与验证闭环（可选）
 
 启动轮询（每 5 分钟；无新评论不启动模型）：
 
@@ -611,7 +629,7 @@ REPLY_POLL_SECONDS=600 nohup bash deploy/reply-poll.sh >>/dev/null 2>&1 &   # �
 - 回复“验证通过” → `confirmed_fixed` → `archived`（issue 关闭仍人工）；
 - `awaiting_direction` 超过 30 分钟仅写日志/下次会话提示，不自动深挖。
 
-### 6.9 Docker 日常命令
+### 6.9 Docker 日常命令（可选）
 
 安装、配置、首次启动、验证与清理见 [4.3 Docker 一键部署](#43-docker-一键部署推荐)；容器运维速查见 [Docker 容器运维](docs/guides/docker-deployment.md)。
 
@@ -685,7 +703,7 @@ deploy/server/fde-ai-build.sh --issue <编号>
 
 构建结果只是构建证据，不等同于用户验证；构建树不得残留补丁。
 
-### 6.12 测试
+### 6.12 测试（未确认）
 
 ```sh
 python3 -m unittest discover -s tests -p "test_*.py"
@@ -693,7 +711,7 @@ python3 -m unittest discover -s tests -p "test_*.py"
 
 当前基线 91 个测试全部通过。
 
-### 6.13 知识沉淀（可选）
+### 6.13 知识沉淀（未确认）
 
 ```text
 /skill:propose-knowledge ...
@@ -737,17 +755,17 @@ python3 -m unittest discover -s tests -p "test_*.py"
 6. **求助**（受阻）；
 7. **代码修改**（diff 展示）/ **校验结果** / **评论与验证征询**。
 
-硬性规则：`继续` 只推进到下一个关键节点；`analysis_verified` 后同一轮完成 `propose-fix` 与分流；`<70` 不得自行选择修复路线或生成补丁/PR；深度分析最多 2 轮。
+硬性规则：`继续 <编号>` 默认只读；明确“继续分析/推进”或显式 `/skill:run-issue-workflow` 才推进到下一个关键节点；`analysis_verified` 后同一轮完成 `propose-fix` 与分流；`<70` 不得自行选择修复路线或生成补丁/PR；深度分析最多 2 轮。
 
 ### 7.3 评论类型
 
 | 类型 | marker | 发布策略 |
 | --- | --- | --- |
-| 分析选项征询 | `openfde-ai:analysis-options` | `analysis_options_comment=auto`，发布前 `dry_run` 确认 |
-| 复现与验证方案 | `openfde-ai:reproduction-plan` | 选择 D 后发布 |
-| 调试 PR | `openfde-ai:debug-pr` | 选择 E 后发布 |
-| 求助 | `openfde-ai:escalation` | `interaction_comments=auto` 时发布；`pr_only` 下仅停在等待态 |
-| 修复交付/验证征询 | 含 PR 链接与 issue/revision/正文哈希 | `pr_only` 允许，PR 创建/更新后立即发布 |
+| 分析选项征询 | `openfde-ai:analysis-options` | `analysis_options_comment=manual`；必须有人工 `publication/approval.json` |
+| 复现与验证方案 | `openfde-ai:reproduction-plan` | 选择 D 后生成草稿；必须有人工批准 |
+| 调试 PR | `openfde-ai:debug-pr` | 选择 E 后生成草稿；必须有人工批准 |
+| 求助 | `openfde-ai:escalation` | `manual` 默认；`auto` 时仍需会话确认 |
+| 修复交付/验证征询 | 含 PR 链接与 issue/revision/正文哈希 | 先生成草稿；`manual` 默认，批准后发布 |
 
 ### 7.4 产物目录
 
@@ -868,9 +886,11 @@ docker exec -it openfde-ai-shell pi
 
 `sources-sync` 以 root 写入并执行 `chmod -R a+rX`；`scanner`/`poller`/`shell` 以镜像内 `agent`（非 root）只读访问源码。`data/intake` 额外挂载到宿主机 `~/fde-ai-assistant/data/intake`（权限 0777）并直接用于 scp 取回。若宿主目录由其他属主创建且不可读，请调整目录权限后重新 `up.sh`。
 
-**Windows 下 `.pi/skills` 符号链接异常**
+**退出PI后怎么继续与原issue交互**
 
-推荐在 Linux（或 WSL2/虚拟机）中运行；Windows 上 junction 与 Git symlink 的识别差异会导致部分测试失败。
+```
+继续 496
+```
 
 **模型/图片能力异常**
 
@@ -883,14 +903,17 @@ pi --version
 
 ## 10. 文档索引
 
+### 安装使用
 - [Pi 使用指南](docs/guides/pi-usage.md)：交互命令、分流、回复闭环；
 - [Docker 容器运维](docs/guides/docker-deployment.md)：日常命令、服务与卷、停止清理（完整安装见 4.3）；
+- [构建与安装助手](docs/guides/build-install.md)：issue 最新 PR、多模块、分支、自动线程、FDE 启动；
+
+### 工作流详解
 - [服务器 CLI 使用指南](docs/guides/usage.md)：队列、扫描、日志与 patch；
 - [工作流架构](docs/architecture/workflow.md)：状态机、置信度分流、安全边界；
 - [取证采集](docs/architecture/intake.md)：A/B/C/D 采集模式与体积约束；
 - [组件归属](docs/architecture/component-attribution.md)：三层归属与人工回退；
 - [Issue 工件目录](docs/architecture/artifact-layout.md)：产物格式与 patch 入口；
-- [构建与安装助手](docs/guides/build-install.md)：issue 最新 PR、多模块、分支、自动线程、FDE 启动；
 - [服务器部署](docs/guides/server-deployment.md)：systemd 服务账户与定时器；
 - [aosp17-ai 容器部署](deploy/server/README.md)：容器与受控构建助手；
 - [服务器工作进程](docs/architecture/server-worker.md)：队列、并发与 Pi 进程语义。
