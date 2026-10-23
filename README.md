@@ -883,7 +883,6 @@ pi --version
 
 ## 10. 文档索引
 
-- [496 端到端 Demo](docs/demos/issue-496-walkthrough.md)：从取证到修复 PR 与验证的完整对话示例；
 - [Pi 使用指南](docs/guides/pi-usage.md)：交互命令、分流、回复闭环；
 - [Docker 容器运维](docs/guides/docker-deployment.md)：日常命令、服务与卷、停止清理（完整安装见 4.3）；
 - [服务器 CLI 使用指南](docs/guides/usage.md)：队列、扫描、日志与 patch；
@@ -895,6 +894,8 @@ pi --version
 - [服务器部署](docs/guides/server-deployment.md)：systemd 服务账户与定时器；
 - [aosp17-ai 容器部署](deploy/server/README.md)：容器与受控构建助手；
 - [服务器工作进程](docs/architecture/server-worker.md)：队列、并发与 Pi 进程语义。
+- [496 端到端 Demo](docs/demos/issue-496-walkthrough.md)：从取证到修复 PR 与验证的完整对话示例；
+- [498 端到端 Demo](docs/demos/issue-498-walkthrough.md)：从取证到修复 PR 到自动编译安装、人工验证的完整对话示例；
 
 
 

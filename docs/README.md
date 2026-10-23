@@ -17,6 +17,7 @@
 ## 当前文档
 
 - [496 端到端 Demo](demos/issue-496-walkthrough.md)：从取证采集、分析、修复方案、PR 到验证的完整对话示例。
+- [498 端到端 Demo](demos/issue-498-walkthrough.md)：L0 采集、CalendarProvider 产品配置修复、模块构建/安装、验证删除与 systemimage A/B 构建。
 - [真实 Bug L0–L3 Runbook](demos/real-bug-l0-l3-runbook.md)：日志采集、分析、修复、编译安装的验证清单与当前阻塞。
 - [服务器 CLI 使用指南](guides/usage.md)：队列、扫描、日志与 patch（安装/Pi/Docker 见 README）。
 - [Docker 容器运维](guides/docker-deployment.md)：日常命令、服务与卷、停止清理；完整安装见 README 4.3。
