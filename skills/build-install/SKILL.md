@@ -8,7 +8,7 @@ description: 当用户要求在容器内构建模块、使用 issue 最新 PR、
 解析用户输入，只通过容器内的单命令执行；不要手工 `git apply`、`make`、`mount` 或 `waydroid init`。
 
 ```sh
-bash /workspace/deploy/assist/build-install.sh [--issue <编号>] [--module <模块> ...] [--pr <PR编号> | --no-pr | --branch <分支>] [--jobs auto|N] [--no-install] [--no-start]
+bash /workspace/deploy/assist/build-install.sh [--issue <编号>] [--module <模块> ...] [--pr <PR编号> | --no-pr | --branch <分支>] [--jobs auto|N] [--no-install] [--no-start] [--install-only --artifact <本地产物>] [--wait-seconds N] [--poll-seconds N]
 ```
 
 ## 自然语言
@@ -21,6 +21,7 @@ bash /workspace/deploy/assist/build-install.sh [--issue <编号>] [--module <模
 - `用 issue 496 的最新 PR 编译安装` → `--issue 496`
 - `按分支 fde_17 编译安装 BoringdroidSystemUI` → `--module BoringdroidSystemUI --no-pr --branch fde_17`
 - `线程用 8` → `--jobs 8`；未指定则自动
+- `这个产物已经编好了，只安装` → `--install-only --artifact <本地产物>`；不重新构建、不重新应用 PR
 
 模块、PR/分支或安装意图不明确时先询问，不要猜。
 
@@ -40,3 +41,7 @@ bash /workspace/deploy/assist/build-install.sh [--issue <编号>] [--module <模
   - `/skill:build-install --issue 496 --module DocumentsUI --pr 3 --jobs 4`
 - 执行后报告构建结果、产物路径与 SHA-256、安装结果和 FDE 状态；失败停止，不自动重试。
 - 不自动合并 PR、不关闭 issue、不修改源码或补丁文件。
+- 构建等待默认 `FDE_BUILD_WAIT_SECONDS=3600` 秒（可用 `--wait-seconds` 覆盖），轮询默认 5 秒。构建命令是阻塞的，**不要**再用 `sleep`/`tail build.log` 轮询，也不要因为本地日志为空就重复启动构建。
+- 构建成功后脚本写 `build/build-result.json`，安装成功后写 `install/install-result.json`；以这两个文件为准。
+- 若脚本返回 3/timeout：远端构建可能仍在跑。先读 `build/build-result.json`、远端 `remote_log`/`.exit`；远端 `exit 0` 后用 `--install-only --artifact <产物>` 续跑安装；仍在运行则报告 `build_running`、远端 pid/log，等待或暂停，**不得死循环重试**。
+- build-install 安装时会停 waydroid；如果只安装/重启 FDE，使用 `deploy/install/fde-install.sh --manifest ... --no-start` 或 `--start-only`。

@@ -10,6 +10,7 @@
 | 日常运行、CLI、查看 patch | [服务器 CLI 使用指南](guides/usage.md) | [Issue 工件目录](architecture/artifact-layout.md) |
 | 使用 Pi 分析单个问题 | [Pi 交互分析](guides/pi-usage.md) | [工作流架构](architecture/workflow.md) |
 | 构建/安装模块 | [构建与安装助手](guides/build-install.md) | [README 6.11](../README.md#611-构建安装docker-单命令) |
+| 初始配置/更新配置 | [README 4.5 配置分层](../README.md#45-配置分层初始配置与更新) | [构建与安装助手](guides/build-install.md) / [Pi 使用指南](guides/pi-usage.md) |
 | Docker 部署/维护服务器 | [README 4.3 Docker 一键部署](../README.md#43-docker-一键部署推荐) | [Docker 容器运维](guides/docker-deployment.md) |
 | 部署/维护宿主服务 | [服务器部署与运维](guides/server-deployment.md) | [服务器工作进程](architecture/server-worker.md) |
 | 查阅历史决策 | [历史设计](archive/designs/README.md) | [历史实施计划](archive/plans/README.md) |
@@ -21,7 +22,8 @@
 - [真实 Bug L0–L3 Runbook](demos/real-bug-l0-l3-runbook.md)：日志采集、分析、修复、编译安装的验证清单与当前阻塞。
 - [服务器 CLI 使用指南](guides/usage.md)：队列、扫描、日志与 patch（安装/Pi/Docker 见 README）。
 - [Docker 容器运维](guides/docker-deployment.md)：日常命令、服务与卷、停止清理；完整安装见 README 4.3。
-- [构建与安装助手](guides/build-install.md)：issue 最新 PR、多模块、分支、自动线程、FDE 启动。
+- [构建与安装助手](guides/build-install.md)：issue 最新 PR、多模块、分支、自动线程、FDE 启动，以及配置分层/初始配置/更新配置。
+- [README 4.5 配置分层](../README.md#45-配置分层初始配置与更新)：profile、`.env`、CLI、`data/assist` 四层及优先级、更新矩阵。
 - [AI Issue 工作流讨论（1 页版）](guides/workflow-discussion.md)：L0–L3 现状、待决策、风险和建议议程。
 - [Pi 交互分析](guides/pi-usage.md)：Pi 的 skill 调用细节。
 - [服务器部署与运维](guides/server-deployment.md)：宿主机 systemd 部署。

@@ -8,6 +8,8 @@
 
 本页只列服务器 CLI、队列、日志和结果查看，避免与 README 重复。
 
+配置分层（profile / `.env` / CLI / `data/assist`）、优先级和初始/更新方式见 [README 4.5](../../README.md#45-配置分层初始配置与更新)。profile 改后需重建镜像并新开 Pi；`.env` 改后需重建/重启容器；build-install 的 `profile.build.*` 不会自动生效。
+
 ## 准备
 
 ```sh

@@ -11,11 +11,11 @@ class BuildInstallAssistantTests(unittest.TestCase):
             self.assertTrue((ROOT / name).is_file(), name)
 
         skill = (ROOT / "skills/build-install/SKILL.md").read_text(encoding="utf-8")
-        for value in ("/skill:build-install", "--pr", "--no-pr", "--latest-pr", "--branch", "--jobs", "modules.json", "BoringdroidSystemUI", "自然语言"):
+        for value in ("/skill:build-install", "--pr", "--no-pr", "--latest-pr", "--branch", "--jobs", "--install-only", "--artifact", "FDE_BUILD_WAIT_SECONDS", "build-result.json", "install-result.json", "build_running", "modules.json", "BoringdroidSystemUI", "自然语言"):
             self.assertIn(value, skill, value)
 
         command = (ROOT / "deploy/assist/build-install.sh").read_text(encoding="utf-8")
-        for value in ("--pr", "--no-pr", "--module", "--no-install", "--no-start", "--latest-pr", "--branch", "--jobs", "--start-only", "build-remote.sh", "fde-install.sh"):
+        for value in ("--pr", "--no-pr", "--module", "--no-install", "--no-start", "--install-only", "--artifact", "--wait-seconds", "--poll-seconds", "--latest-pr", "--branch", "--jobs", "--start-only", "build-remote.sh", "fde-install.sh", "FDE_BUILD_WAIT_SECONDS", "FDE_BUILD_POLL_SECONDS", "write_build_result", "write_install_result", "build-result.json", "install-result.json"):
             self.assertIn(value, command, value)
 
         installer = (ROOT / "deploy/install/fde-install.sh").read_text(encoding="utf-8")
@@ -63,11 +63,11 @@ class BuildInstallAssistantTests(unittest.TestCase):
 
     def test_docs_and_workflow_mention_build_install(self):
         docs = (ROOT / "docs/guides/build-install.md").read_text(encoding="utf-8")
-        for value in ("build-install.sh", "--pr", "--no-pr", "fde-start.sh"):
+        for value in ("build-install.sh", "--pr", "--no-pr", "fde-start.sh", "--install-only", "FDE_BUILD_WAIT_SECONDS", "build-result.json", "install-result.json"):
             self.assertIn(value, docs, value)
         workflow = (ROOT / "skills/run-issue-workflow/SKILL.md").read_text(encoding="utf-8")
-        self.assertIn("build-install.sh", workflow)
-        self.assertIn("build.install=true", workflow)
+        for value in ("build-install.sh", "build.install=true", "build_running", "--install-only", "禁止 sleep/tail"):
+            self.assertIn(value, workflow, value)
 
 
 if __name__ == "__main__":

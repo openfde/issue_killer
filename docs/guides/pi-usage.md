@@ -13,6 +13,8 @@ pi
 
 本项目选用的项目配置是 `profiles/openfde/profile.json`。它提供仓库、Android repo XML 清单、产物目录和发布策略；它不包含问题内容或凭据。
 
+配置不是单一文件：profile 只控制工作流策略；模型/token、构建/安装主机和 `FDE_*` 参数在 `.env`/环境变量；单次构建用 CLI 覆盖；模块映射/安装脚本可放 `data/assist/` 持久卷。优先级是 **CLI > 容器环境变量 > 脚本默认值**，profile 的 `build.*` 字段不会自动传给 `build-install.sh`。初始配置、更新矩阵和 profile 改后需重建镜像/新开 Pi 的说明见 [README 4.5](../../README.md#45-配置分层初始配置与更新)。
+
 ## 命令行入口
 
 本项目有两个不同的命令行入口，不能混用：

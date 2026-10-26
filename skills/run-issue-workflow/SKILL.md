@@ -68,7 +68,7 @@ B. 只保留补丁文件
 C. 暂停本轮
 ```
 
-到达等待态（`component_review_requested`/`build_requested`/`build_failed`/`awaiting_direction`/`awaiting_verification`）或终态（`archived`/`needs_information`/`blocked`）时，同样给出 A/B/C 选项（含继续方式/恢复命令）并说明原因，不得沉默结束需要人工决策的步骤。
+到达等待态（`component_review_requested`/`build_requested`/`build_running`/`build_failed`/`awaiting_direction`/`awaiting_verification`）或终态（`archived`/`needs_information`/`blocked`）时，同样给出 A/B/C 选项（含继续方式/恢复命令）并说明原因，不得沉默结束需要人工决策的步骤。
 
 **会话恢复规则**：任何会话（含被轮询/服务器唤醒的无人值守运行）继续处理时，必须先重读 `.fde-ai/issues/<issue号>/state.json` 与最新产物，从**当前实际状态**继续；不得依赖旧会话上下文，也不得因上下文与文件不一致而停止。
 
@@ -96,10 +96,10 @@ C. 暂停本轮
 **耗时预算（求助触发）**：同一目标（定位组件、根因或某个符号）连续探索约 **10 分钟**、或多次检索仍无进展时，必须停下调用 `escalate-issue`：列出已掌握线索、已排除项与候选方向（A/B/C），请开发人员指方向；不得无限期硬耗。外部/搜索命令一律带 `timeout`（建议 ≤300 秒）与结果上限。
 
 **构建+安装（build.install=true，优先）**：交付评论发布后停【构建+安装】节点，给 A/B/C：
-- A. 编译安装该 issue 的最新 PR（默认模块；可多模块）：执行 `deploy/assist/build-install.sh --issue <编号>`；成功后记录 `build/build-result.json`/`build/install-result.json`，`state=awaiting_verification`；不自动合并 PR、不关闭 issue。
-- B. 自定义模块/PR/分支：询问模块、`--pr`/`--no-pr`/`--branch`、是否只构建；再执行同一命令。
+- A. 编译安装该 issue 的最新 PR（默认模块；可多模块）：执行 `deploy/assist/build-install.sh --issue <编号>`；默认等待 `FDE_BUILD_WAIT_SECONDS=3600` 秒；成功后读取 `build/build-result.json`/`build/install-result.json`，`state=awaiting_verification`；不自动合并 PR、不关闭 issue。
+- B. 已有产物只安装，或自定义模块/PR/分支：`build-install.sh --issue <编号> --module <模块> --install-only --artifact <本地产物>`；或询问模块、`--pr`/`--no-pr`/`--branch` 后执行普通构建。
 - C. 跳过构建安装，保持 `awaiting_verification` 或停止本轮。
-命令支持 `--module` 重复/逗号分隔、`--jobs auto|N`、`--no-install`、`--no-start`。构建或安装失败时记录原因，停在 `build_failed` 或等待人工，不自动重试。
+命令支持 `--module` 重复/逗号分隔、`--jobs auto|N`、`--no-install`、`--no-start`、`--wait-seconds`、`--poll-seconds`。**构建超时处理（硬性）**：build-install 返回 3/timeout 时，先读 `build/build-result.json` 和远端 `remote_log`/`.exit`；远端已 `exit 0` → 用 `--install-only` 续跑安装；远端仍在运行 → 写 `build_running`，记录远端 pid/log，给一次“继续等待/只安装/暂停”的选择；**禁止 sleep/tail 本地 build.log 循环、禁止重复启动构建**。构建或安装确为失败时才写 `build_failed`，不自动重试。
 
 **旧构建通道（build.install=false）**：`build.enabled` 非 true 时，不得调用 `request-build`，也不得进入 `build_requested`/`build_failed`；历史状态若停在 `build_requested`，继续时视为已跳过，直接进入交付评论流程（`draft-issue-comment` → `publish-policy-comment`）。启用后（`build.enabled=true`）只允许通过 profile `build.helper` 声明的授权助手执行：`manual`（默认）只写 `build/build-request.json` 并停在 `build_requested`，等待人工运行助手；`auto` 才可调用助手。助手在受控构建树内临时应用 patch，构建后必须回滚，不得手工修改源码、应用 diff 或运行构建命令。`build_requested` 期间不得重复构建；`build_failed` 时记录失败并停止，交由人工处理。
 

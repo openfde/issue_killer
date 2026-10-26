@@ -39,6 +39,7 @@ docker exec -it openfde-ai bash      # 进入容器后运行 pi
 - [2. 工作流一览](#2-工作流一览)
 - [3. 从代码获取](#3-从代码获取)
 - [4. 安装与凭据](#4-安装与凭据)
+  - [4.5 配置分层：初始配置与更新](#45-配置分层初始配置与更新)
 - [5. 使用配置](#5-使用配置)
 - [6. 各环节任务命令](#6-各环节任务命令)
 - [7. 执行过程](#7-执行过程)
@@ -295,7 +296,7 @@ export DEEPSEEK_API_KEY='...'
 # 其他模型：export PI_PROVIDER=... PI_MODEL=... <PROVIDER>_API_KEY=...
 ```
 
-`up.sh` 会自动生成 `.env`；已 export 的变量优先，也可以编辑 `.env`。
+`up.sh` 会自动生成 `.env`；已 export 的变量优先，也可以编辑 `.env`。构建/安装主机、`FDE_BUILD_*`、`FDE_INSTALL_*`、SSH key 也在这里配置；四层配置、初始配置和后续更新见 [4.5](#45-配置分层初始配置与更新)。
 
 #### 5) 一键启动
 
@@ -444,9 +445,71 @@ ls .pi/skills | head                                # 34 个 skill 符号链接
 
 Docker 安装验证见 [4.3](#43-docker-一键部署推荐)。
 
+### 4.5 配置分层：初始配置与更新
+
+没有单一“总配置文件”。参数分成四层，先看清位置再改，避免改了 profile 却以为 build-install 会使用它。
+
+| 层 | 位置 | 管什么 | 生效方式 |
+| --- | --- | --- | --- |
+| 1. 工作流策略 | `profiles/openfde/profile.json` | triage 阈值、深度分析轮数、回复轮询、publication 策略、`build.enabled`/`build.install`、模块列表等 | 改后 `./deploy/docker/up.sh`（重建镜像/重启服务）；已运行 issue 不会自动变更，新 issue 或新 revision 才使用新策略 |
+| 2. 模型/令牌/构建/安装环境 | `.env`（或已 export 的环境变量） | `PI_*`、`DEEPSEEK_API_KEY`/`OPENAI_API_KEY` 等、`GH_TOKEN`、`FDE_BUILD_*`、`FDE_INSTALL_*`、`FDE_SSH_KEY` 等 | `up.sh` 读取 `.env` 并导出；scanner/poller/shell 的 `env_file` 也会注入；重建容器后生效 |
+| 3. 一次性 CLI | `deploy/docker/build-install.sh` 参数 | 单次构建的模块、PR/分支、jobs、target、product、等待时间、是否安装/启动 | 只影响本次命令，不需要重建镜像 |
+| 4. 模块映射/安装脚本 | `data/assist/`（持久卷） | 自定义 `module-map.json`、`fde-install.sh` | 运行时用 `FDE_MODULE_MAP`/`FDE_INSTALL_SCRIPT` 指向文件；不重建镜像 |
+
+**优先级**：构建 CLI > 容器环境变量（`.env`/`env_file`）> `build-install.sh` 脚本默认值。`profile.json` 只控制 issue 工作流策略，**不是 build-install 的参数来源**。
+
+#### 初始配置
+
+1. 首次运行 `./deploy/docker/up.sh` 会从 `deploy/server/env.example` 生成 `.env`，并检查 `GH_TOKEN` 和模型 key；`up.sh` 会读取 `.env`，已 export 的同名变量优先。
+2. 编辑 `.env`，至少配置：
+
+```sh
+GH_TOKEN=...
+PI_PROVIDER=deepseek
+PI_MODEL=deepseek-flash
+PI_ENABLED_MODELS=deepseek/deepseek-flash
+DEEPSEEK_API_KEY=...
+
+FDE_BUILD_HOST=10.31.62.29
+FDE_BUILD_TREE=/aosp4/hy_fde17
+FDE_BUILD_TARGET=fde_arm64-cp2a-user
+FDE_BUILD_PRODUCT=fde_arm64
+FDE_BUILD_JOBS=auto
+FDE_BUILD_WAIT_SECONDS=3600
+FDE_BUILD_POLL_SECONDS=5
+
+FDE_INSTALL_HOST=10.31.62.247
+FDE_INSTALL_USER=huyang
+FDE_INSTALLER=/usr/local/sbin/fde-install-module
+FDE_SSH_KEY=/workspace/data/ssh/id_ed25519
+FDE_KNOWN_HOSTS=/workspace/data/ssh/known_hosts
+```
+
+3. 工作流默认值已在 `profiles/openfde/profile.json`；需要调整阈值/发布策略时再改，改后重新运行 `up.sh`。
+4. 构建机的 SSH key、247 的 sudo 安装器、adb 按 [构建与安装助手](docs/guides/build-install.md) 的“环境准备”配置；它们不使用 `.env` 里的私钥内容。
+5. 自定义模块映射/安装脚本放到 `data/assist/`，运行时指定 `FDE_MODULE_MAP`/`FDE_INSTALL_SCRIPT`；不要改只读的 `/workspace/deploy`。
+
+#### 更新配置
+
+| 要改什么 | 怎么做 | 需要重建/重启 | 注意 |
+| --- | --- | --- | --- |
+| 模型、token、构建/安装主机 | 编辑 `.env`，再运行 `./deploy/docker/up.sh`（或 `docker compose up -d --force-recreate`） | 重建/重启容器 | 容器环境变量在创建时固定；改完不要只 `docker restart` |
+| 单次构建参数 | 直接给 `build-install.sh --module/--pr/--branch/--jobs/--target/--product/--wait-seconds` | 不需要 | CLI 覆盖 `.env` 和默认值 |
+| 工作流策略 | 编辑 `profiles/openfde/profile.json`，运行 `./deploy/docker/up.sh` | 重建镜像，新开 Pi | 已运行 issue 的 `profile_sha256` 是旧的；用新 issue 或新 revision 验证新策略 |
+| 模块映射/安装脚本 | 编辑 `data/assist/module-map.json` 或 `data/assist/fde-install.sh` | 不需要 | 运行时设置 `FDE_MODULE_MAP`/`FDE_INSTALL_SCRIPT` |
+| SSH/sudo/adb | 更新 `~/.ssh/authorized_keys`、sudoers 或设备连接 | 不需要 | build-install 走 SSH；adb 只用于采集/验证 |
+
+绕过 `up.sh` 直接使用 `docker compose` 时，`env_file` 仍会把 `.env` 注入 scanner/poller/shell；如果要在当前 shell 里先做替换或检查，可执行 `set -a; . ./.env; set +a`。`.env` 不要提交，token 只放环境变量并定期轮换。
+
+**重要限制**：`profile.build.target/host/tree` 目前不会自动传给 `build-install.sh`。如果你改了 profile 里的这些字段但没有改 `.env` 或 CLI，构建仍使用脚本默认值。当前请优先改 `.env` 或命令行；要做“单一配置源”，需要后续给 `build-install.sh` 增加读取 `data/assist/build.env` 或 profile 的逻辑。
+
+完整构建参数、超时/续跑和安装细节见 [构建与安装助手](docs/guides/build-install.md)。
+
 ## 5. 使用配置
 
 ### 5.1 Profile：`profiles/openfde/profile.json`
+
+Profile 只控制工作流策略，不是构建/安装的总配置。完整分层、初始配置和更新方式见 [4.5](#45-配置分层初始配置与更新)；`profile.build.*` 目前不会自动传给 `build-install.sh`，构建/安装主机和参数请改 `.env` 或 CLI。修改 profile 后需重新运行 `./deploy/docker/up.sh` 并新开 Pi；已运行 issue 保留旧 `profile_sha256`。
 
 | 字段 | 当前值 | 说明 |
 | --- | --- | --- |
@@ -649,7 +712,7 @@ docker logs -f openfde-ai-poller
 
 ### 6.11 构建+安装（Docker 单命令）
 
-Docker 用户可直接构建并安装到 FDE。issue 模式默认读取最新 PR 并自动匹配模块。
+Docker 用户可直接构建并安装到 FDE。issue 模式默认读取最新 PR 并自动匹配模块。构建/安装参数属于 [4.5 配置分层](#45-配置分层初始配置与更新) 的第 2/3 层：`.env` 的 `FDE_*` 或本次 CLI；profile 的 `build.*` 不会自动传入。
 
 ```sh
 cd ~/fde-ai-assistant
@@ -665,15 +728,25 @@ cd ~/fde-ai-assistant
 
 # 显式 PR
 ./deploy/docker/build-install.sh --issue 496 --module DocumentsUI --pr 3
+
+# 已有产物只安装，不重新构建/不重新应用 PR
+./deploy/docker/build-install.sh --issue 499 --module SystemUI \
+  --install-only --artifact /workspace/data/artifacts/499/SystemUI.apk
+
+# 覆盖远端构建等待（默认 3600 秒）
+./deploy/docker/build-install.sh --issue 499 --wait-seconds 5400
 ```
 
 - `--jobs auto`（默认）按模块映射的 `jobs` 选线程，`--jobs N` 强制覆盖
 - `--no-pr` / `--branch`：不应用 PR；`--branch` 构建后恢复原分支
 - `--no-install`：只构建并取回产物；`--no-start`：安装但不启动 FDE
+- `--install-only --artifact <path>`：已有产物只安装，用于构建晚到/超时后接回安装
+- `--wait-seconds` / `--poll-seconds`：远端构建等待与轮询；默认 3600/5 秒
+- 构建/安装结果写入 `build/build-result.json` / `install/install-result.json`
 - 多模块逐个构建/安装，最后只启动一次 FDE
 - 当前 shell 未激活 docker 组时使用 `sg docker -c '...'`
 
-完整参数、模块映射和流程见 [构建与安装助手](docs/guides/build-install.md)。
+完整参数、模块映射、超时/续跑和配置更新见 [构建与安装助手](docs/guides/build-install.md)。
 
 Pi 内：
 
@@ -685,7 +758,7 @@ Pi 内：
 
 `BoringdroidSystemUI` 是 `FdeSystemUI` 的别名；自然语言会映射到对应模块和参数。
 
-工作流：`build.install=true` 时在交付评论后停【构建+安装】，A=最新 PR/默认模块，B=自定义模块/PR/分支，C=跳过。
+工作流：`build.install=true` 时在交付评论后停【构建+安装】，A=最新 PR/默认模块，B=已有产物只安装（`--install-only`）或自定义模块/PR/分支，C=跳过。构建超时先查 `build/build-result.json` 和远端日志/exit；远端已成功就用 install-only 接回安装，仍在运行则记录 `build_running`，不要 sleep/tail 本地日志死循环或重复起构建。
 
 ### 6.11.1 旧手工构建（build.install=false，兼容）
 
@@ -725,6 +798,20 @@ python3 -m unittest discover -s tests -p "test_*.py"
 /skill:confirm-component-mapping 该问题属于 <项目名或路径>；依据：<一句话>
 ```
 
+### 6.14 异常恢复（未确认）
+
+用于监督流程执行和环境保持
+
+1.bot方案
+
+2.自动重入
+
+3.状态维护
+
+### 6.15 并发执行（未确认）
+
+各个助手都可以并行处理多个任务
+
 ## 7. 执行过程
 
 ### 7.1 状态与阶段
@@ -738,9 +825,9 @@ python3 -m unittest discover -s tests -p "test_*.py"
 | 方案与分流 | `solution_proposed` → `analysis_options_drafted` / `patch_proposed` |
 | 修复交付 | `patch_validated` → `pull_request_created` → `comment_drafted` → `awaiting_verification` |
 | 收敛 | `confirmed_fixed` → `archived` |
-| 等待人工 | `awaiting_direction` / `direction_received`、`component_review_requested`、`build_requested` / `build_failed` |
+| 等待人工 | `awaiting_direction` / `direction_received`、`component_review_requested`、`build_requested` / `build_running` / `build_failed` |
 | 调试插桩 | `debug_patch_proposed` → `debug_pull_request_created` |
-| 构建 | `build_requested` → `build_done` → `artifacts_collected` |
+| 构建 | `build_requested` → `build_running` → `build_done` → `artifacts_collected` |
 | 终止/阻塞 | `archived`、`needs_information`、`blocked` |
 
 `state.json` 使用唯一状态字段 `state`，并记录 `revision`、`phase`（analysis/fix）、`fix_confidence`、`deep_analysis_rounds`、`direction_wait_since` 等。

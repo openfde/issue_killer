@@ -20,6 +20,10 @@ usage: build-install.sh [options]
   --tree <path>           default /aosp4/hy_fde17
   --no-install            build/fetch only
   --no-start              install but do not start OpenFDE
+  --install-only          install an existing artifact; skip build
+  --artifact <path>       local artifact for --install-only
+  --wait-seconds <n>      remote build wait budget (default FDE_BUILD_WAIT_SECONDS=3600)
+  --poll-seconds <n>      remote build poll interval (default FDE_BUILD_POLL_SECONDS=5)
   -h, --help
 EOF
     exit 2
@@ -33,6 +37,10 @@ BRANCH=""
 KEEP_BRANCH=0
 INSTALL=1
 START=1
+INSTALL_ONLY=0
+ARTIFACT_OVERRIDE=""
+BUILD_WAIT_SECONDS="${FDE_BUILD_WAIT_SECONDS:-3600}"
+BUILD_POLL_SECONDS="${FDE_BUILD_POLL_SECONDS:-5}"
 TARGET="${FDE_BUILD_TARGET:-fde_arm64-cp2a-user}"
 JOBS="${FDE_BUILD_JOBS:-auto}"
 PRODUCT="${FDE_BUILD_PRODUCT:-fde_arm64}"
@@ -67,10 +75,31 @@ while [ "$#" -gt 0 ]; do
         --tree) [ "$#" -ge 2 ] || usage; TREE="$2"; shift 2 ;;
         --no-install) INSTALL=0; shift ;;
         --no-start) START=0; shift ;;
+        --install-only) INSTALL_ONLY=1; shift ;;
+        --artifact) [ "$#" -ge 2 ] || usage; ARTIFACT_OVERRIDE="$2"; shift 2 ;;
+        --wait-seconds) [ "$#" -ge 2 ] || usage; BUILD_WAIT_SECONDS="$2"; shift 2 ;;
+        --poll-seconds) [ "$#" -ge 2 ] || usage; BUILD_POLL_SECONDS="$2"; shift 2 ;;
         -h|--help) usage ;;
         *) usage ;;
     esac
 done
+
+case "$BUILD_WAIT_SECONDS" in
+    ''|*[!0-9]*) echo "--wait-seconds must be a positive integer" >&2; exit 2 ;;
+esac
+case "$BUILD_POLL_SECONDS" in
+    ''|*[!0-9]*) echo "--poll-seconds must be a positive integer" >&2; exit 2 ;;
+esac
+[ "$BUILD_WAIT_SECONDS" -gt 0 ] || { echo "--wait-seconds must be greater than 0" >&2; exit 2; }
+[ "$BUILD_POLL_SECONDS" -gt 0 ] || { echo "--poll-seconds must be greater than 0" >&2; exit 2; }
+if [ "$INSTALL_ONLY" -eq 1 ]; then
+    [ "$INSTALL" -eq 1 ] || { echo "--install-only cannot be combined with --no-install" >&2; exit 2; }
+    [ -z "$PR" ] || { echo "--install-only cannot be combined with --pr" >&2; exit 2; }
+    [ -z "$BRANCH" ] || { echo "--install-only cannot be combined with --branch" >&2; exit 2; }
+elif [ -n "$ARTIFACT_OVERRIDE" ]; then
+    echo "--artifact requires --install-only" >&2
+    exit 2
+fi
 
 [ -f "$MODULE_MAP" ] || { echo "module map not found: $MODULE_MAP" >&2; exit 2; }
 [ -f "$REMOTE_BUILD_SOURCE" ] || { echo "remote build script not found: $REMOTE_BUILD_SOURCE" >&2; exit 2; }
@@ -174,6 +203,215 @@ done
 declare -A PR_BY_REPO=()
 declare -A BRANCH_ORIG=()
 
+STAMP="$(date +%Y%m%d-%H%M%S)"
+TAG="${ISSUE:-local}"
+WORK="${FDE_WORK_ROOT:-/workspace/data/assist/work}/${TAG}-${STAMP}"
+mkdir -p "$WORK"
+RESULT_ROWS="$WORK/results.tsv"
+: > "$RESULT_ROWS"
+RESULT_STARTED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+ISSUE_DIR=""
+BUILD_RESULT=""
+INSTALL_RESULT=""
+INSTALL_LOG=""
+if [ -n "$ISSUE" ] && [ -d "/workspace/.fde-ai/issues/$ISSUE" ]; then
+    ISSUE_DIR="/workspace/.fde-ai/issues/$ISSUE"
+    mkdir -p "$ISSUE_DIR/build" "$ISSUE_DIR/install"
+    BUILD_RESULT="$ISSUE_DIR/build/build-result.json"
+    INSTALL_RESULT="$ISSUE_DIR/install/install-result.json"
+    INSTALL_LOG="$ISSUE_DIR/install/install.log"
+fi
+
+write_build_result() {
+    local status="$1" stage="$2" code="${3:-}" reason="${4:-}"
+    [ -n "$ISSUE_DIR" ] || return 0
+    RESULT_STATUS="$status" RESULT_STAGE="$stage" RESULT_CODE="$code" RESULT_REASON="$reason" \
+    RESULT_ISSUE="$ISSUE" RESULT_PR="${RESULT_PR_OVERRIDE:-$PR}" RESULT_TREE="$TREE" RESULT_STARTED_AT="$RESULT_STARTED_AT" \
+    RESULT_ROWS="$RESULT_ROWS" python3 - "$BUILD_RESULT" <<'PY'
+import json
+import os
+import sys
+from datetime import datetime, timezone
+
+rows = []
+path = os.environ.get("RESULT_ROWS", "")
+if path and os.path.exists(path):
+    with open(path, encoding="utf-8") as handle:
+        for line in handle:
+            fields = line.rstrip("\n").split("\t")
+            if len(fields) != 6:
+                continue
+            module, artifact, sha, remote_log, image, dest = fields
+            rows.append({
+                "module": module,
+                "artifact": artifact,
+                "sha256": sha,
+                "remote_log": remote_log,
+                "image": image,
+                "dest": dest,
+            })
+pr = os.environ.get("RESULT_PR", "")
+code = os.environ.get("RESULT_CODE", "")
+issue = os.environ.get("RESULT_ISSUE", "")
+data = {
+    "issue": int(issue) if issue.isdigit() else issue or None,
+    "status": os.environ.get("RESULT_STATUS", ""),
+    "stage": os.environ.get("RESULT_STAGE", ""),
+    "exit_code": int(code) if code.isdigit() else None,
+    "pr": int(pr) if pr.isdigit() else None,
+    "tree": os.environ.get("RESULT_TREE", ""),
+    "started_at": os.environ.get("RESULT_STARTED_AT", ""),
+    "completed_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    "reason": os.environ.get("RESULT_REASON", ""),
+    "modules": [row["module"] for row in rows],
+    "artifacts": rows,
+}
+if len(rows) == 1:
+    data.update({
+        "module": rows[0]["module"],
+        "artifact": rows[0]["artifact"],
+        "artifact_sha256": rows[0]["sha256"],
+        "remote_log": rows[0]["remote_log"],
+    })
+target = sys.argv[1]
+tmp = target + ".tmp"
+with open(tmp, "w", encoding="utf-8") as handle:
+    json.dump(data, handle, ensure_ascii=False, indent=2)
+    handle.write("\n")
+os.replace(tmp, target)
+PY
+}
+
+write_install_result() {
+    local status="$1" code="${2:-}" reason="${3:-}"
+    [ -n "$ISSUE_DIR" ] || return 0
+    RESULT_STATUS="$status" RESULT_CODE="$code" RESULT_REASON="$reason" RESULT_TAG="$TAG" \
+    RESULT_ISSUE="$ISSUE" RESULT_STARTED_AT="$RESULT_STARTED_AT" RESULT_ROWS="$RESULT_ROWS" RESULT_LOG="$INSTALL_LOG" \
+    RESULT_HOST="${FDE_INSTALL_HOST:-10.31.62.247}" python3 - "$INSTALL_RESULT" <<'PY'
+import json
+import os
+import sys
+from datetime import datetime, timezone
+
+rows = []
+path = os.environ.get("RESULT_ROWS", "")
+if path and os.path.exists(path):
+    with open(path, encoding="utf-8") as handle:
+        for line in handle:
+            fields = line.rstrip("\n").split("\t")
+            if len(fields) != 6:
+                continue
+            module, source, sha, remote_log, image, dest = fields
+            rows.append({
+                "module": module,
+                "source": source,
+                "artifact": "/home/huyang/fde-artifacts/%s/%s" % (os.environ.get("RESULT_TAG", ""), os.path.basename(source)),
+                "sha256": sha,
+                "dest": dest,
+            })
+code = os.environ.get("RESULT_CODE", "")
+issue = os.environ.get("RESULT_ISSUE", "")
+data = {
+    "issue": int(issue) if issue.isdigit() else issue or None,
+    "status": os.environ.get("RESULT_STATUS", ""),
+    "exit_code": int(code) if code.isdigit() else None,
+    "host": os.environ.get("RESULT_HOST", ""),
+    "started_at": os.environ.get("RESULT_STARTED_AT", ""),
+    "completed_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    "reason": os.environ.get("RESULT_REASON", ""),
+    "log": os.environ.get("RESULT_LOG", ""),
+    "modules": [row["module"] for row in rows],
+    "artifacts": rows,
+}
+target = sys.argv[1]
+tmp = target + ".tmp"
+with open(tmp, "w", encoding="utf-8") as handle:
+    json.dump(data, handle, ensure_ascii=False, indent=2)
+    handle.write("\n")
+os.replace(tmp, target)
+PY
+}
+
+install_existing_artifact() {
+    local name="$1" source="$2" image="$3" dest="$4"
+    [ -f "$source" ] || { echo "artifact not found: $source" >&2; return 2; }
+    local sha remote_artifact manifest rc
+    sha="$(sha256sum "$source" | awk '{print $1}')"
+    remote_artifact="/home/huyang/fde-artifacts/${TAG}/$(basename "$source")"
+    manifest="$WORK/manifest-${name}.json"
+    printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$name" "$source" "$sha" "-" "$image" "$dest" >> "$RESULT_ROWS"
+    python3 - "$manifest" "$name" "$source" "$remote_artifact" "$image" "$dest" <<'PY'
+import json
+import sys
+manifest, module, source, artifact, image, dest = sys.argv[1:7]
+with open(manifest, "w", encoding="utf-8") as handle:
+    json.dump({
+        "module": module,
+        "source": source,
+        "artifact": artifact,
+        "image": image,
+        "dest": dest,
+    }, handle, ensure_ascii=False, indent=2)
+    handle.write("\n")
+PY
+    write_install_result running
+    set +e
+    if [ -n "$INSTALL_LOG" ]; then
+        "$INSTALL_SCRIPT" --manifest "$manifest" --no-start 2>&1 | tee -a "$INSTALL_LOG"
+        rc=${PIPESTATUS[0]}
+    else
+        "$INSTALL_SCRIPT" --manifest "$manifest" --no-start
+        rc=$?
+    fi
+    set -e
+    if [ "$rc" -ne 0 ]; then
+        write_install_result failed "$rc" "install failed for $name; log: $INSTALL_LOG"
+        return "$rc"
+    fi
+    if [ "$START" -eq 1 ]; then
+        set +e
+        if [ -n "$INSTALL_LOG" ]; then
+            "$INSTALL_SCRIPT" --start-only 2>&1 | tee -a "$INSTALL_LOG"
+            rc=${PIPESTATUS[0]}
+        else
+            "$INSTALL_SCRIPT" --start-only
+            rc=$?
+        fi
+        set -e
+        if [ "$rc" -ne 0 ]; then
+            write_install_result failed "$rc" "start failed; log: $INSTALL_LOG"
+            return "$rc"
+        fi
+    fi
+    write_install_result success 0
+    echo "[build] installed $name from $source"
+}
+
+if [ "$INSTALL_ONLY" -eq 1 ]; then
+    [ ${#M_NAME[@]} -eq 1 ] || { echo "--install-only requires exactly one --module" >&2; exit 2; }
+    name="${M_NAME[0]}"
+    source="$ARTIFACT_OVERRIDE"
+    if [ -z "$source" ] && [ -n "$BUILD_RESULT" ] && [ -f "$BUILD_RESULT" ]; then
+        source="$(python3 - "$BUILD_RESULT" "$name" <<'PY'
+import json
+import sys
+path, module = sys.argv[1:3]
+with open(path, encoding="utf-8") as handle:
+    data = json.load(handle)
+if data.get("module") == module and data.get("artifact"):
+    print(data["artifact"])
+else:
+    for item in data.get("artifacts") or []:
+        if item.get("module") == module:
+            print(item.get("artifact") or item.get("path") or "")
+            break
+PY
+)"
+    fi
+    install_existing_artifact "$name" "$source" "${M_IMAGE[0]}" "${M_DEST[0]}"
+    exit 0
+fi
+
 latest_pr_for_repo() {
     local repo="$1" state_pr="" state_url="" state_num=""
     if [ -f "$STATE" ]; then
@@ -240,13 +478,10 @@ fi
 SSH=(ssh -i "$SSH_KEY" -o BatchMode=yes -o UserKnownHostsFile="$KNOWN_HOSTS")
 SCP=(scp -i "$SSH_KEY" -o BatchMode=yes -o UserKnownHostsFile="$KNOWN_HOSTS")
 REMOTE_TARGET="$REMOTE_USER@$HOST"
-STAMP="$(date +%Y%m%d-%H%M%S)"
-TAG="${ISSUE:-local}"
-WORK="${FDE_WORK_ROOT:-/workspace/data/assist/work}/${TAG}-${STAMP}"
-mkdir -p "$WORK"
 
 NPROC="$("${SSH[@]}" "$REMOTE_TARGET" "nproc 2>/dev/null || echo 8" | tr -dc '0-9')"
 [ -n "$NPROC" ] || NPROC=8
+write_build_result running build "" ""
 
 restore_branches() {
     [ "$KEEP_BRANCH" -eq 1 ] && return 0
@@ -261,6 +496,7 @@ if [ -n "$BRANCH" ]; then
         dirty="$("${SSH[@]}" "$REMOTE_TARGET" "git -C '$TREE/$project' status --porcelain")"
         if [ -n "$dirty" ]; then
             echo "dirty worktree: $TREE/$project" >&2
+            write_build_result failed build 7 "dirty worktree: $TREE/$project"
             exit 7
         fi
         orig="$("${SSH[@]}" "$REMOTE_TARGET" "git -C '$TREE/$project' branch --show-current")"
@@ -330,27 +566,35 @@ for i in "${!M_NAME[@]}"; do
     "${SSH[@]}" "$REMOTE_TARGET" "rm -f '$remote_log' '$remote_exit' '$remote_pid'; nohup bash '$remote_script' '$TREE' '$project' '$TARGET' '$name' '$jobs' '$patch' '$artifact_rel' '$PRODUCT' '$remote_log' '$remote_exit' > '$remote_log' 2>&1 & echo \$! > '$remote_pid'; cat '$remote_pid'"
 
     rc=""
-    for _ in $(seq 1 360); do
+    deadline=$((SECONDS + BUILD_WAIT_SECONDS))
+    while [ "$SECONDS" -lt "$deadline" ]; do
         rc="$("${SSH[@]}" "$REMOTE_TARGET" "cat '$remote_exit' 2>/dev/null || true")"
         if [ -n "$rc" ]; then break; fi
-        sleep 2
+        sleep "$BUILD_POLL_SECONDS"
     done
     "${SSH[@]}" "$REMOTE_TARGET" "tail -20 '$remote_log' 2>/dev/null || true"
     if [ -z "$rc" ]; then
-        echo "[build] timeout waiting for $name; inspect $remote_log" >&2
+        remote_pid_value="$("${SSH[@]}" "$REMOTE_TARGET" "cat '$remote_pid' 2>/dev/null || true")"
+        echo "[build] timeout after ${BUILD_WAIT_SECONDS}s waiting for $name; remote build may still be running (pid ${remote_pid_value:-unknown}); log: $remote_log" >&2
+        RESULT_PR_OVERRIDE="$pr" write_build_result timeout build 3 "timeout after ${BUILD_WAIT_SECONDS}s waiting for $name; remote log: $remote_log; remote pid: ${remote_pid_value:-unknown}"
         exit 3
     fi
     if [ "$rc" -ne 0 ]; then
         echo "[build] $name failed with exit $rc; log: $remote_log" >&2
+        RESULT_PR_OVERRIDE="$pr" write_build_result failed build "$rc" "$name failed with exit $rc; log: $remote_log"
         exit "$rc"
     fi
 
     mkdir -p "$(dirname "$artifact_local")"
     "${SCP[@]}" "$REMOTE_TARGET:$TREE/out/target/product/$PRODUCT/$artifact_rel" "$artifact_local"
+    sha="$(sha256sum "$artifact_local" | awk '{print $1}')"
     echo "[build] $name artifact: $artifact_local"
-    sha256sum "$artifact_local"
+    echo "$sha  $artifact_local"
+    printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$name" "$artifact_local" "$sha" "$remote_log" "$image" "$dest" >> "$RESULT_ROWS"
+    RESULT_PR_OVERRIDE="$pr" write_build_result success build 0
 
     if [ "$INSTALL" -eq 1 ]; then
+        write_install_result running
         manifest="$WORK/manifest-${name}.json"
         MODULE_NAME="$name" SOURCE_PATH="$artifact_local" REMOTE_ARTIFACT="/home/huyang/fde-artifacts/${TAG}/$(basename "$artifact_rel")" IMAGE_NAME="$image" DEST_PATH="$dest" \
         python3 - "$manifest" <<'PY'
@@ -367,11 +611,38 @@ with open(sys.argv[1], "w", encoding="utf-8") as handle:
     }, handle, ensure_ascii=False, indent=2)
     handle.write("\n")
 PY
-        "$INSTALL_SCRIPT" --manifest "$manifest" --no-start
+        if [ -n "$INSTALL_LOG" ]; then
+            set +e
+            "$INSTALL_SCRIPT" --manifest "$manifest" --no-start 2>&1 | tee -a "$INSTALL_LOG"
+            rc=${PIPESTATUS[0]}
+            set -e
+            if [ "$rc" -ne 0 ]; then
+                write_install_result failed "$rc" "install failed for $name; log: $INSTALL_LOG"
+                exit "$rc"
+            fi
+        else
+            "$INSTALL_SCRIPT" --manifest "$manifest" --no-start
+        fi
     fi
 done
 
-if [ "$INSTALL" -eq 1 ] && [ "$START" -eq 1 ]; then
-    "$INSTALL_SCRIPT" --start-only
+RESULT_PR_OVERRIDE="$pr" write_build_result success build 0
+
+if [ "$INSTALL" -eq 1 ]; then
+    if [ "$START" -eq 1 ]; then
+        if [ -n "$INSTALL_LOG" ]; then
+            set +e
+            "$INSTALL_SCRIPT" --start-only 2>&1 | tee -a "$INSTALL_LOG"
+            rc=${PIPESTATUS[0]}
+            set -e
+            if [ "$rc" -ne 0 ]; then
+                write_install_result failed "$rc" "start failed; log: $INSTALL_LOG"
+                exit "$rc"
+            fi
+        else
+            "$INSTALL_SCRIPT" --start-only
+        fi
+    fi
+    write_install_result success 0
 fi
 echo "[build] done: ${M_NAME[*]}"
