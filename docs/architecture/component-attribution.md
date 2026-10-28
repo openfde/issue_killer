@@ -5,9 +5,10 @@
 ## 三层归属
 
 1. **组件映射知识**（`component-map`）
+   - 先读 [GUIDE.md](../../profiles/openfde/component-map/GUIDE.md)：信号字典、组件目录、决策树、负向信号、案例索引。
    - 种子：`profiles/openfde/component-map/entries.md`（随仓库版本化）。
    - 学习：`data/knowledge/component-map/entries.md`（人工确认后追加，同键冲突时优先）。
-   - 条目格式：`kind`（log-tag/package/path/module/property-prefix/keyword）→ `project`/`local_path` + 置信度 + 来源 + 验证时间。
+   - 条目格式：`kind`（log-tag/package/activity/provider/path/module/property-prefix/keyword）→ `project`/`local_path` + 置信度 + 来源 + 验证时间；`project` 使用 manifest 项目名。
 2. **本地树检索**：在只读树 `fde-sources/` 检索信号字符串（tag、包名、模块名、路径片段）；命中文件向上寻找最近的 `.git`（repo 检出中每个项目根都有），得到组件仓库与行号证据。唯一命中=高置信；多候选并列=待确认。
 3. **manifest**：按 `fde-manifests/default.xml` 的 include/remove-project/project 顺序解析项目名、remote、revision 与路径，提供结构与 revision 事实，不用于猜测归属。
 

@@ -782,15 +782,27 @@ deploy/server/fde-ai-build.sh --issue <编号>
 python3 -m unittest discover -s tests -p "test_*.py"
 ```
 
-当前基线 91 个测试全部通过。
+当前基线以 VM 上全量测试输出为准；Windows 本机受 `.pi/skills` junction 与 `fcntl` 限制，部分测试不适用。
 
-### 6.13 知识沉淀（未确认）
+### 6.13 知识沉淀
+
+`archive-case` 归档时会自动生成一个 **draft case**（不自动进 Wiki）：
+
+```sh
+python3 automation/capture_knowledge_case.py --workspace . --issue <编号>
+```
+
+产物：`data/knowledge/cases/<编号>/case.json`、`case.md`、`data/knowledge/index.json`。
+
+`retrieve-knowledge` 会先按组件/包名/log tag 检索 case 和 Wiki；`draft` 只作线索，已确认 case 才能作为知识引用。人工审核后：
 
 ```text
 /skill:propose-knowledge ...
 /skill:promote-knowledge ...
 /skill:validate-knowledge ...
 ```
+
+完整规则见 [知识沉淀与组件导引](docs/guides/knowledge-base.md)。
 
 组件归属确认使用：
 
@@ -1000,6 +1012,8 @@ pi --version
 - [工作流架构](docs/architecture/workflow.md)：状态机、置信度分流、安全边界；
 - [取证采集](docs/architecture/intake.md)：A/B/C/D 采集模式与体积约束；
 - [组件归属](docs/architecture/component-attribution.md)：三层归属与人工回退；
+- [组件分流指南](profiles/openfde/component-map/GUIDE.md)：信号字典、组件目录、决策树、负向信号与案例索引；
+- [知识沉淀与组件导引](docs/guides/knowledge-base.md)：case 自动采集、Wiki 晋升与检索规则；
 - [Issue 工件目录](docs/architecture/artifact-layout.md)：产物格式与 patch 入口；
 - [服务器部署](docs/guides/server-deployment.md)：systemd 服务账户与定时器；
 - [aosp17-ai 容器部署](deploy/server/README.md)：容器与受控构建助手；

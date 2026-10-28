@@ -20,7 +20,7 @@ class ComponentMapTests(unittest.TestCase):
         readme = (SEED / "README.md").read_text(encoding="utf-8")
         entries = (SEED / "entries.md").read_text(encoding="utf-8")
 
-        for kind in ("log-tag", "package", "path", "module", "property-prefix", "keyword"):
+        for kind in ("log-tag", "package", "activity", "provider", "path", "module", "property-prefix", "keyword"):
             self.assertIn(kind, readme)
         for value in (
             "device_fde",
@@ -28,14 +28,36 @@ class ComponentMapTests(unittest.TestCase):
             "waydroid_android_external_mesa3d",
             "external_pulseaudio",
             "packages_modules_Bluetooth",
+            "taskplugin",
+            "systemuiplugin",
+            "packages_apps_documentsui",
+            "platform/packages/apps/Calendar",
+            "platform/packages/providers/CalendarProvider",
         ):
             self.assertIn(value, entries, value)
         self.assertIn("data/knowledge/component-map", readme)
 
+    def test_guide_covers_signals_decisions_and_cases(self):
+        guide = (SEED / "GUIDE.md").read_text(encoding="utf-8")
+        for value in (
+            "信号字典",
+            "组件目录",
+            "决策树",
+            "负向信号",
+            "案例索引",
+            "491",
+            "493",
+            "498",
+            "manifest 项目名",
+        ):
+            self.assertIn(value, guide, value)
+        readme = (SEED / "README.md").read_text(encoding="utf-8")
+        self.assertIn("GUIDE.md", readme)
+
     def test_resolve_skill_uses_three_layers_and_stops_for_review(self):
         content = (ROOT / "skills/resolve-manifest-components/SKILL.md").read_text(encoding="utf-8")
 
-        for value in ("component-map", "fde-sources/", ".git", "component_review_requested", "confirm-component-mapping"):
+        for value in ("component-map", "GUIDE.md", "fde-sources/", ".git", "component_review_requested", "confirm-component-mapping"):
             self.assertIn(value, content, value)
 
     def test_confirm_skill_persists_human_mapping(self):
