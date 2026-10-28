@@ -581,6 +581,7 @@ cp config/openfde-ai-server.example.json config/openfde-ai-server.json
 - 容器内使用网络 adb：`adb connect <IP>:5555`（镜像已内置 `adb`；USB 默认不映射）；
 - 完成后对话中输出**完整 issue 草稿**（供复制）+ zip/文件；包在宿主机 `~/fde-ai-assistant/data/intake/<slug>`，可直接：
   `scp -r <宿主机用户>@<宿主机IP>:~/fde-ai-assistant/data/intake/<slug> <本机目录>`；
+- 草稿确认后可选 **A. 自动发布正文**（`automation/create_issue.py`）；GitHub API 不能随 issue 上传附件，附件仍需人工补或 `--evidence-url`；B 只出草稿（默认），C 修改，D 取消；不自动关闭/评论/批量创建；
 - D 模式不连设备，只校验并打包已有 bugreport。
 
 ### 6.2 整理最简 issue（手动）

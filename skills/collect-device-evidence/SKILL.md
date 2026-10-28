@@ -39,7 +39,7 @@ description: 当测试人员发现现象、需要在提 issue 前交互式采集
 6. **D：事后证据**：不连接设备、不执行任何设备命令；只校验并打包已有 bugreport；发生时间只写范围（未知写“待补充”）；超 24MB 生成时间窗摘录包。
 7. **打包与草稿**
    - 产物写 `data/intake/<日期>-<slug>/`；`summary.md` 含现象、设备、时间（可范围/模糊）、日志开关原值/新值、每项用途与 SHA-256；zip ≤24MB；超限生成时间窗摘录包并说明。
-   - 生成 `issue-draft.md`：标题 `<现象摘要>（<build 版本号>）`——版本号只取 bugreport 文件名中的版本段（如 `CP2A.260605.016`）或 `getprop ro.build.display.id`；**不得用 `Android 17` 等 OS 版本代替**；无法取得时写“版本待补充”并询问调用方；正文含现象、时间线、环境、复现步骤（推测，未确认）、预期/实际、附件清单（只列文件名与用途，**不写 SHA-256**）、下次偶现采集建议、AI 取证声明；不写内网地址。
+   - 生成 `issue-draft.md`（正文）和 `title.txt`（只放标题）：标题 `<现象摘要>（<build 版本号>）`——版本号只取 bugreport 文件名中的版本段（如 `CP2A.260605.016`）或 `getprop ro.build.display.id`；**不得用 `Android 17` 等 OS 版本代替**；无法取得时写“版本待补充”并询问调用方；正文含现象、时间线、环境、复现步骤（推测，未确认）、预期/实际、附件清单（只列文件名与用途，**不写 SHA-256**）、下次偶现采集建议、AI 取证声明；不写内网地址。
 8. **输出（必须包含 issue 草稿全文，且保持 Markdown）**
    - 标题单独一行；正文必须放在**单独的 Markdown 代码围栏**中（围栏内从 `## 现象` 开始），保留 `#`/`##`/`-`/`|` 等原始标记。
    - 不要输出 Pi/TUI 渲染后的标题、缩进或 Unicode 表格；如果界面渲染了 Markdown，仍以代码块内容为准。
@@ -63,4 +63,22 @@ description: 当测试人员发现现象、需要在提 issue 前交互式采集
    - **不要只给草稿路径**；草稿正文必须出现在对话里。
    - 不输出哈希表、命令清单、长解释或其他内容。
 
-边界：除确认门中列出的日志开关 `setprop log.tag...`（及必要的 per-tag `setprop log.tag.<TAG>`）外，全程只读（bugreport/screencap/screenrecord/白名单 pull）；禁止 root、禁止 `logcat -c`、禁止安装/卸载/其他改设置；不得自动挑选设备；不得在 `.fde-ai/runs/` 创建产物；不代提 issue、不发布任何内容。
+9. **发布确认（草稿输出后）**：调用方确认标题/正文时给一次短菜单：
+   ```text
+   发布方式：
+   A. 自动发布正文到 GitHub（需 GH_TOKEN；GitHub API 不能随 issue 上传附件，附件仍需人工补或 --evidence-url）
+   B. 只输出草稿（默认，人工发布）
+   C. 修改标题/正文后再发布
+   D. 取消
+   回复 A/B/C/D。
+   ```
+   - 只有调用方明确回复 A 并再次确认标题/正文后才执行；不得默认自动发布。
+   - 执行：
+     ```bash
+     python3 automation/create_issue.py --workspace . \
+       --intake <slug> --title "<标题>" --repo <repo> --confirm \
+       [--evidence-url <取证包链接>] [--label <标签>]
+     ```
+   - 发布后报告 issue URL；`--evidence-url` 为空时明确提醒“附件未上传，需人工补”。不得自动关闭 issue、自动发评论、批量创建或继续整理。
+
+边界：除确认门中列出的日志开关 `setprop log.tag...`（及必要的 per-tag `setprop log.tag.<TAG>`）外，全程只读（bugreport/screencap/screenrecord/白名单 pull）；禁止 root、禁止 `logcat -c`、禁止安装/卸载/其他改设置；不得自动挑选设备；不得在 `.fde-ai/runs/` 创建产物。**默认不代提 issue**；仅当发布确认门选择 A 且调用方明确确认后，才创建 issue 正文；附件按配置处理，不得自动关闭、评论或批量创建。
