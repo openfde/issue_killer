@@ -136,6 +136,15 @@ class CaptureKnowledgeCaseTests(unittest.TestCase):
         self.assertEqual(case["knowledge_status"], "draft")
         self.assertFalse(case["verification"]["verified"])
 
+    def test_knowledge_skill_wraps_capture_and_rebuild(self):
+        skill = ROOT / "skills" / "knowledge-case" / "SKILL.md"
+        content = skill.read_text(encoding="utf-8")
+        self.assertIn("/skill:knowledge-case", content)
+        self.assertIn("capture_knowledge_case.py", content)
+        self.assertIn("--rebuild-index", content)
+        self.assertIn("archive/case.json", content)
+        self.assertIn("不自动", content)
+
     def test_rebuild_index_only_mode(self):
         first = self._run("--issue", "493")
         self.assertEqual(first.returncode, 0, first.stderr)

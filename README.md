@@ -786,7 +786,15 @@ python3 -m unittest discover -s tests -p "test_*.py"
 
 ### 6.13 知识沉淀
 
-`archive-case` 归档时会自动生成一个 **draft case**（不自动进 Wiki）：
+`archive-case` 归档时会自动生成一个 **draft case**（不自动进 Wiki）。交互式使用统一走 Pi skill：
+
+```text
+/skill:knowledge-case 采集问题 <编号>
+/skill:knowledge-case 重建索引
+/skill:knowledge-case 查看问题 <编号>
+```
+
+底层命令仍可直接调试：
 
 ```sh
 python3 automation/capture_knowledge_case.py --workspace . --issue <编号>

@@ -37,6 +37,7 @@ class OpenFdeSkillsTests(unittest.TestCase):
             "publish-policy-comment",
             "sync-github-replies",
             "archive-case",
+            "knowledge-case",
             "propose-knowledge",
             "promote-knowledge",
             "validate-knowledge",

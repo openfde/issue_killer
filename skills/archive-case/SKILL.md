@@ -13,4 +13,4 @@ description: 当 issue 分析 revision 需要不可变且关联来源的归档�
 python3 automation/capture_knowledge_case.py --workspace . --issue <issue号>
 ```
 
-校验 `data/knowledge/cases/<issue号>/case.json` 与 `case.md` 存在、来源哈希完整、`knowledge_status` 为 `draft`（除非已有 `confirmed_fixed` 验证）。成功后把根目录 `state.json` 的 `state` 推进到 `archived`；产物缺失或知识采集失败时停止，保持当前状态以便重试。不得晋升知识、修改源码或写入 GitHub；不得自动把 case 写入 Wiki。
+校验 `data/knowledge/cases/<issue号>/case.json` 与 `case.md` 存在、来源哈希完整、`knowledge_status` 为 `draft`（除非已有 `confirmed_fixed` 验证）。人工重跑可调用 `/skill:knowledge-case 采集问题 <issue号>`；自动流程仍直接调用同一脚本。成功后把根目录 `state.json` 的 `state` 推进到 `archived`；产物缺失或知识采集失败时停止，保持当前状态以便重试。不得晋升知识、修改源码或写入 GitHub；不得自动把 case 写入 Wiki。

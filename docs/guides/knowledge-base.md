@@ -13,6 +13,16 @@ Case 是“发生过什么”，Wiki 是“可以复用的项目事实”。两�
 
 ## 2. Case 自动采集
 
+交互式使用 Pi skill：
+
+```text
+/skill:knowledge-case 采集问题 <编号>
+/skill:knowledge-case 重建索引
+/skill:knowledge-case 查看问题 <编号>
+```
+
+自动流程由 `archive-case` 直接调用脚本；手动调试才使用底层命令：
+
 ```bash
 python3 automation/capture_knowledge_case.py --workspace . --issue <编号>
 ```
