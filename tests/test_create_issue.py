@@ -1,7 +1,9 @@
+import importlib.util
 import json
 import subprocess
 import sys
 import tempfile
+import types
 import unittest
 from pathlib import Path
 
@@ -22,6 +24,9 @@ class CreateIssueTests(unittest.TestCase):
             "## 现象\n\n下拉状态栏出现异常。\n\n## 附件清单\n\n- bugreport.zip\n- screen.png\n",
             encoding="utf-8",
         )
+        (self.intake / "bugreport.zip").write_bytes(b"PK\x03\x04test")
+        (self.intake / "screen.png").write_bytes(b"\x89PNG\r\n\x1a\ntest")
+        (self.intake / "summary.md").write_text("summary", encoding="utf-8")
 
     def tearDown(self):
         self.temp.cleanup()
@@ -47,7 +52,20 @@ class CreateIssueTests(unittest.TestCase):
         self.assertIn("openfde-ai:intake slug=", payload["body_preview"])
         self.assertIn("## 取证包", payload["body_preview"])
         self.assertIn("https://example.com/evidence.zip", payload["body_preview"])
+        self.assertEqual(len(payload["attachments"]), 2)
+        names = {item["name"] for item in payload["attachments"]}
+        self.assertIn("2026-10-28-test-bugreport.zip", names)
+        self.assertIn("2026-10-28-test-screen.png", names)
+        self.assertTrue(all("releases/download/intake-evidence/" in item["url"] for item in payload["attachments"]))
+        self.assertIn("2026-10-28-test-bugreport.zip", payload["body_preview"])
         self.assertFalse((self.intake / "issue.json").exists())
+
+    def test_no_upload_attachments_leaves_body_without_release_links(self):
+        result = self._run("--dry-run", "--no-upload-attachments")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["attachments"], [])
+        self.assertNotIn("## 取证包", payload["body_preview"])
 
     def test_missing_title_is_rejected(self):
         (self.intake / "title.txt").unlink()
@@ -76,6 +94,26 @@ class CreateIssueTests(unittest.TestCase):
         result = self._run("--title", "x")
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("--confirm", result.stderr)
+
+    def test_upload_creates_release_when_missing(self):
+        spec = importlib.util.spec_from_file_location("create_issue_module", SCRIPT)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        calls = []
+
+        def fake_run(args, timeout=120):
+            calls.append(args)
+            if args[:2] == ["release", "view"]:
+                return types.SimpleNamespace(returncode=1, stdout="", stderr="not found")
+            return types.SimpleNamespace(returncode=0, stdout="", stderr="")
+
+        module.run_gh = fake_run
+        planned = [{"path": str(self.intake / "bugreport.zip"), "name": "slug-bugreport.zip", "url": "https://example.com/x"}]
+        module.upload_attachments(planned, "openfde/openfde", "intake-evidence")
+        self.assertEqual(calls[0][:2], ["release", "view"])
+        self.assertEqual(calls[1][:2], ["release", "create"])
+        self.assertEqual(calls[2][:2], ["release", "upload"])
+        self.assertIn("--clobber", calls[2])
 
 
 if __name__ == "__main__":

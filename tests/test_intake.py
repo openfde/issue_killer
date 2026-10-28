@@ -19,7 +19,7 @@ class IntakeTests(unittest.TestCase):
     def test_intake_skill_is_interactive_and_read_only(self):
         content = (ROOT / "skills/collect-device-evidence/SKILL.md").read_text(encoding="utf-8")
 
-        for value in ("bugreport", "screencap", "screenrecord", "data/intake/", "issue-draft", "不写 SHA-256", "build 版本号", "scp -r", "开始采集", "复现完成", "不得执行", "不得自动挑选", "禁止 root", "禁止 `logcat -c`", "issue-draft.md 正文", "log.tag", "setprop log.tag V", "日志开关", "build 版本", "CP2A", "不得用 `Android 17`", "Markdown 代码围栏", "docker cp", "title.txt", "发布方式", "自动发布", "create_issue.py", "附件"):
+        for value in ("bugreport", "screencap", "screenrecord", "data/intake/", "issue-draft", "不写 SHA-256", "build 版本号", "scp -r", "开始采集", "复现完成", "不得执行", "不得自动挑选", "禁止 root", "禁止 `logcat -c`", "issue-draft.md 正文", "log.tag", "setprop log.tag V", "日志开关", "build 版本", "CP2A", "不得用 `Android 17`", "Markdown 代码围栏", "docker cp", "title.txt", "发布方式", "自动发布", "create_issue.py", "附件", "Release asset"):
             self.assertIn(value, content, value)
 
     def test_removed_planning_skills_and_templates_are_gone(self):

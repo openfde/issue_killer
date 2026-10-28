@@ -18,9 +18,10 @@
 7. 取回：包在宿主机 `~/fde-ai-assistant/data/intake/<slug>`，直接 `scp -r huyang@192.168.227.129:~/fde-ai-assistant/data/intake/<slug> <本机目录>`；**只给宿主机 scp，禁止 `docker cp`/容器内路径**；
 8. 发布确认（草稿输出后）：A. 自动发布正文到 GitHub；B. 只输出草稿（默认）；C. 修改后发布；D. 取消。选择 A 后由调用方再次确认，执行：
    ```bash
-   python3 automation/create_issue.py --workspace . --intake <slug> --title "<标题>" --repo <repo> --confirm [--evidence-url <链接>] [--label <标签>]
+   python3 automation/create_issue.py --workspace . --intake <slug> --title "<标题>" --repo <repo> --confirm \
+     [--evidence-repo <附件仓库>] [--evidence-tag intake-evidence] [--evidence-url <外部链接>] [--label <标签>]
    ```
-   **注意**：GitHub API 不能随 issue 上传附件；自动发布只创建正文，附件仍需人工补或通过 `--evidence-url` 提供链接。发布后不得自动关闭、评论或批量创建。
+   **附件**：默认把 intake 目录中的取证文件上传到 GitHub Release asset（tag `intake-evidence`，资产名带 slug 前缀），并把链接写入正文 `## 取证包`；`--no-upload-attachments` 可关闭。上传失败时脚本返回非零，不创建 issue。发布后不得自动关闭、评论或批量创建。
 
 ## 降级
 

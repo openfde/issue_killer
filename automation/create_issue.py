@@ -19,7 +19,8 @@ import sys
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
+from urllib.parse import quote
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
@@ -28,7 +29,9 @@ if hasattr(sys.stderr, "reconfigure"):
 
 SCHEMA_VERSION = 1
 DEFAULT_REPO = "openfde/openfde"
+DEFAULT_EVIDENCE_TAG = "intake-evidence"
 INTAKE_ROOT = "data/intake"
+METADATA_FILES = {"issue-draft.md", "title.txt", "summary.md", "issue.json"}
 
 
 def utc_now() -> str:
@@ -116,14 +119,76 @@ def extract_body(draft_text: str, title: str) -> str:
     return "\n".join(lines).strip()
 
 
-def build_body(draft_text: str, title: str, slug: str, evidence_url: Optional[str]) -> str:
+def list_attachments(directory: Path) -> List[Path]:
+    files = []
+    for path in sorted(directory.rglob("*")):
+        if not path.is_file():
+            continue
+        if path.name in METADATA_FILES or path.name.startswith(".") or path.suffix == ".tmp":
+            continue
+        files.append(path)
+    return files
+
+
+def plan_attachments(directory: Path, slug: str, repo: str, tag: str) -> List[Dict[str, Any]]:
+    planned = []
+    for path in list_attachments(directory):
+        relative = str(path.relative_to(directory)).replace("\\", "/").replace("/", "-")
+        asset = f"{slug}-{relative}"
+        url = f"https://github.com/{repo}/releases/download/{tag}/{quote(asset, safe='')}"
+        planned.append({"name": asset, "path": str(path), "size": path.stat().st_size, "url": url})
+    return planned
+
+
+def upload_attachments(planned: List[Dict[str, Any]], repo: str, tag: str) -> None:
+    if not planned:
+        return
+    viewed = run_gh(["release", "view", tag, "--repo", repo], timeout=60)
+    if viewed.returncode != 0:
+        created = run_gh(
+            [
+                "release",
+                "create",
+                tag,
+                "--repo",
+                repo,
+                "--title",
+                "Intake evidence",
+                "--notes",
+                "Evidence assets uploaded by the OpenFDE intake workflow.",
+            ],
+            timeout=120,
+        )
+        if created.returncode != 0:
+            raise RuntimeError(created.stderr or created.stdout or "gh release create failed")
+    uploaded = run_gh(
+        ["release", "upload", tag, *[item["path"] for item in planned], "--repo", repo, "--clobber"],
+        timeout=300,
+    )
+    if uploaded.returncode != 0:
+        raise RuntimeError(uploaded.stderr or uploaded.stdout or "gh release upload failed")
+
+
+def build_body(
+    draft_text: str,
+    title: str,
+    slug: str,
+    attachments: List[Dict[str, Any]],
+    evidence_url: Optional[str],
+) -> str:
     body = extract_body(draft_text, title)
     marker = f"<!-- openfde-ai:intake slug={slug} -->"
     if marker not in body:
         body = body.rstrip() + "\n\n" + marker
+
+    links = [f"- [{item['name']}]({item['url']})" for item in attachments]
     if evidence_url:
-        if evidence_url.rstrip() not in body:
-            body = body.rstrip() + "\n\n## 取证包\n" + evidence_url.strip()
+        links.append(f"- [外部取证链接]({evidence_url.strip()})")
+    if links:
+        if "## 取证包" in body:
+            body = body.rstrip() + "\n" + "\n".join(links)
+        else:
+            body = body.rstrip() + "\n\n## 取证包\n" + "\n".join(links)
     return body.rstrip() + "\n"
 
 
@@ -140,7 +205,11 @@ def main() -> int:
     parser.add_argument("--intake", required=True, help="intake directory name under data/intake")
     parser.add_argument("--repo", help="owner/repo; defaults to profile github.repository")
     parser.add_argument("--title", help="title override; otherwise read title.txt / issue-draft.md")
-    parser.add_argument("--evidence-url", help="optional URL to append under 取证包")
+    parser.add_argument("--evidence-url", help="optional external URL to append under 取证包")
+    parser.add_argument("--evidence-repo", help="repo for release assets; defaults to --repo")
+    parser.add_argument("--evidence-tag", default=DEFAULT_EVIDENCE_TAG, help="release tag for evidence assets")
+    parser.add_argument("--upload-attachments", dest="upload_attachments", action="store_true", default=True, help="upload intake files as release assets (default)")
+    parser.add_argument("--no-upload-attachments", dest="upload_attachments", action="store_false", help="do not upload intake files")
     parser.add_argument("--label", action="append", default=[], help="issue label (repeatable)")
     parser.add_argument("--force", action="store_true", help="ignore an existing issue.json record")
     parser.add_argument("--dry-run", action="store_true", help="build and print the issue without creating it")
@@ -160,16 +229,22 @@ def main() -> int:
     title = (args.title or "").strip() or parse_title(draft_text, directory / "title.txt")
     if not title:
         raise SystemExit("empty issue title")
-    body = build_body(draft_text, title, args.intake, args.evidence_url)
-    body_hash = sha256_text(body)
     repo = (args.repo or default_repo(workspace)).strip()
+    evidence_repo = (args.evidence_repo or repo).strip()
+    all_attachments = plan_attachments(directory, args.intake, evidence_repo, args.evidence_tag)
+    planned = all_attachments if args.upload_attachments else []
+    body = build_body(draft_text, title, args.intake, planned, args.evidence_url)
+    body_hash = sha256_text(body)
     result: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
         "slug": args.intake,
         "repo": repo,
+        "evidence_repo": evidence_repo,
+        "evidence_tag": args.evidence_tag,
         "title": title,
         "body_sha256": body_hash,
         "marker": f"openfde-ai:intake slug={args.intake}",
+        "attachments": planned,
         "attachments_uploaded": False,
         "evidence_url": args.evidence_url,
     }
@@ -177,7 +252,16 @@ def main() -> int:
     record_path = directory / "issue.json"
     existing = read_json(record_path)
     if isinstance(existing, dict) and existing.get("url") and not args.force:
-        result.update({"created": False, "existing": True, "url": existing.get("url"), "number": existing.get("number")})
+        result.update(
+            {
+                "created": False,
+                "existing": True,
+                "url": existing.get("url"),
+                "number": existing.get("number"),
+                "attachments": existing.get("attachments") or [],
+                "attachments_uploaded": bool(existing.get("attachments_uploaded")),
+            }
+        )
         print(json.dumps(result, ensure_ascii=False, sort_keys=True))
         return 0
 
@@ -186,6 +270,15 @@ def main() -> int:
         if auth.returncode != 0:
             sys.stderr.write(auth.stderr or "gh auth status failed\n")
             return 1
+
+        attachments_uploaded = False
+        if args.upload_attachments and planned:
+            try:
+                upload_attachments(planned, evidence_repo, args.evidence_tag)
+                attachments_uploaded = True
+            except (RuntimeError, subprocess.TimeoutExpired) as exc:
+                sys.stderr.write(f"attachment upload failed: {exc}\n")
+                return 1
 
         fd, temp_name = tempfile.mkstemp(prefix="intake-issue-", suffix=".md")
         try:
@@ -217,22 +310,29 @@ def main() -> int:
             "title": title,
             "body_sha256": body_hash,
             "evidence_url": args.evidence_url,
+            "evidence_repo": evidence_repo,
+            "evidence_tag": args.evidence_tag,
+            "attachments": planned,
+            "attachments_uploaded": attachments_uploaded,
             "created_at": utc_now(),
             "source": str(directory.relative_to(workspace)).replace(os.sep, "/"),
         }
         write_json_atomic(record_path, record)
-        result.update({"created": True, "url": url, "number": number})
-        if not args.evidence_url:
-            sys.stderr.write(
-                "warning: GitHub issue attachments are not uploaded automatically; "
-                f"upload {directory} manually or rerun with --evidence-url.\n"
-            )
+        result.update({"created": True, "url": url, "number": number, "attachments_uploaded": attachments_uploaded})
+        if args.upload_attachments and planned and not attachments_uploaded:
+            sys.stderr.write("warning: attachments were not uploaded; upload them manually.\n")
+        elif not args.upload_attachments and all_attachments:
+            sys.stderr.write("warning: --no-upload-attachments set; attachments were not uploaded.\n")
+        elif not all_attachments and not args.evidence_url:
+            sys.stderr.write("warning: no intake attachments found and no --evidence-url supplied.\n")
         print(json.dumps(result, ensure_ascii=False, sort_keys=True))
         return 0
 
     result.update({"created": False, "dry_run": True, "would_create": True, "body_preview": body[:1200]})
-    if not args.evidence_url:
-        sys.stderr.write("warning: attachments require a manual upload or --evidence-url.\n")
+    if not args.upload_attachments and all_attachments:
+        sys.stderr.write("warning: --no-upload-attachments set; attachments will not be uploaded.\n")
+    elif not all_attachments and not args.evidence_url:
+        sys.stderr.write("warning: no intake attachments found and no --evidence-url supplied.\n")
     print(json.dumps(result, ensure_ascii=False, sort_keys=True))
     return 0
 

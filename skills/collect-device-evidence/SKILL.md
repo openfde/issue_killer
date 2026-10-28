@@ -66,7 +66,7 @@ description: 当测试人员发现现象、需要在提 issue 前交互式采集
 9. **发布确认（草稿输出后）**：调用方确认标题/正文时给一次短菜单：
    ```text
    发布方式：
-   A. 自动发布正文到 GitHub（需 GH_TOKEN；GitHub API 不能随 issue 上传附件，附件仍需人工补或 --evidence-url）
+   A. 自动发布正文 + 取证附件（正文写入 issue，附件上传到 GitHub Release asset）
    B. 只输出草稿（默认，人工发布）
    C. 修改标题/正文后再发布
    D. 取消
@@ -77,8 +77,10 @@ description: 当测试人员发现现象、需要在提 issue 前交互式采集
      ```bash
      python3 automation/create_issue.py --workspace . \
        --intake <slug> --title "<标题>" --repo <repo> --confirm \
-       [--evidence-url <取证包链接>] [--label <标签>]
+       [--evidence-repo <附件仓库>] [--evidence-tag intake-evidence] \
+       [--evidence-url <外部链接>] [--label <标签>]
      ```
-   - 发布后报告 issue URL；`--evidence-url` 为空时明确提醒“附件未上传，需人工补”。不得自动关闭 issue、自动发评论、批量创建或继续整理。
+   - 默认把 intake 目录中的取证文件上传为 Release asset（`intake-evidence` tag，资产名带 slug 前缀），并把链接写入正文 `## 取证包`；`--no-upload-attachments` 可关闭。
+   - 上传失败时脚本返回非零，**不要创建 issue**，也不要声称附件已上传；发布后报告 issue URL 和附件链接。不得自动关闭 issue、自动发评论、批量创建或继续整理。
 
 边界：除确认门中列出的日志开关 `setprop log.tag...`（及必要的 per-tag `setprop log.tag.<TAG>`）外，全程只读（bugreport/screencap/screenrecord/白名单 pull）；禁止 root、禁止 `logcat -c`、禁止安装/卸载/其他改设置；不得自动挑选设备；不得在 `.fde-ai/runs/` 创建产物。**默认不代提 issue**；仅当发布确认门选择 A 且调用方明确确认后，才创建 issue 正文；附件按配置处理，不得自动关闭、评论或批量创建。
