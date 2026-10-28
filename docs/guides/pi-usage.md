@@ -96,6 +96,14 @@ python3 automation/openfde_ai_server.py \
   `scp -r <宿主机用户>@<宿主机IP>:~/fde-ai-assistant/data/intake/<slug> <本机目录>`；
 - D 模式不连设备；除已确认的日志开关外只读：禁止 root、禁止 `logcat -c`、禁止安装/卸载/其他改设置。
 
+草稿生成后可单独发布：
+
+```text
+/skill:publish-intake-issue <slug>
+```
+
+先 dry-run 展示标题、正文摘要和待上传附件；确认后默认把 intake 目录中的取证文件上传为 GitHub Release asset，并把链接写入正文 `## 取证包`。上传失败不会创建 issue。也可用 `--no-upload-attachments` 只发正文，或用 `--evidence-repo` 指定公开 evidence 仓库。
+
 **最简 issue + 手动整理**：可以先只提交一句 `偶现…，有 bugreport`（或仅文字+截图），创建后执行整理命令——pi 内 `/skill:enrich-issue-intake 整理问题 #N`，或 shell `bash deploy/enrich-issue.sh N`。整理会规范化标题/正文（标题使用 build 版本，如 `CP2A.260605.016`，不得用 Android 17 等 OS 版本；时间线只写范围、推测步骤标注未确认、保留原始描述）；**无 bugreport 时**用模型视觉读图并给出“初步分析（未验证）”与建议补充的证据。详见[取证采集](../architecture/intake.md)。偶现问题也可选 D 模式（事后证据：不连设备、只校验打包已有 bugreport）。
 
 全程只读：禁止 root、禁止 `logcat -c`、禁止安装/卸载/改设置。

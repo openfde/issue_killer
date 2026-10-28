@@ -73,7 +73,7 @@ description: 当测试人员发现现象、需要在提 issue 前交互式采集
    回复 A/B/C/D。
    ```
    - 只有调用方明确回复 A 并再次确认标题/正文后才执行；不得默认自动发布。
-   - 执行：
+   - 优先调用 `/skill:publish-intake-issue <slug>`；非交互流程直接执行同一脚本。执行：
      ```bash
      python3 automation/create_issue.py --workspace . \
        --intake <slug> --title "<标题>" --repo <repo> --confirm \

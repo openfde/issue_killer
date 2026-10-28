@@ -16,7 +16,7 @@
 5. 打包：`data/intake/<日期>-<slug>/` 内生成 zip（含 `summary.md`：现象、设备、时间、日志开关原值/新值、用途、SHA-256），≤24MB；超限生成时间窗摘录包；
 6. 生成 issue 草稿：写 `issue-draft.md`（正文）和 `title.txt`（只放标题）——标题为 `<现象摘要>（<build 版本号>）`（如 `CP2A.260605.016`；**不得用 `Android 17` 等 OS 版本代替**），正文含环境/复现/预期与实际/附件清单（**不写 SHA-256**；内网地址不写入）；**在对话中用单独的 Markdown 代码围栏输出正文供复制**（不要让 TUI 渲染后复制）；
 7. 取回：包在宿主机 `~/fde-ai-assistant/data/intake/<slug>`，直接 `scp -r huyang@192.168.227.129:~/fde-ai-assistant/data/intake/<slug> <本机目录>`；**只给宿主机 scp，禁止 `docker cp`/容器内路径**；
-8. 发布确认（草稿输出后）：A. 自动发布正文到 GitHub；B. 只输出草稿（默认）；C. 修改后发布；D. 取消。选择 A 后由调用方再次确认，执行：
+8. 发布确认（草稿输出后）：A. 自动发布正文 + 附件到 GitHub；B. 只输出草稿（默认）；C. 修改后发布；D. 取消。选择 A 后优先调用 `/skill:publish-intake-issue <slug>`（非交互流程直接执行同一脚本），由调用方再次确认后执行：
    ```bash
    python3 automation/create_issue.py --workspace . --intake <slug> --title "<标题>" --repo <repo> --confirm \
      [--evidence-repo <附件仓库>] [--evidence-tag intake-evidence] [--evidence-url <外部链接>] [--label <标签>]

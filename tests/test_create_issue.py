@@ -95,6 +95,12 @@ class CreateIssueTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("--confirm", result.stderr)
 
+    def test_publish_skill_wraps_confirm_and_attachments(self):
+        skill = (ROOT / "skills" / "publish-intake-issue" / "SKILL.md").read_text(encoding="utf-8")
+        for value in ("/skill:publish-intake-issue", "create_issue.py", "--dry-run", "--confirm", "Release asset", "附件"):
+            self.assertIn(value, skill, value)
+        self.assertIn("不自动关闭", skill)
+
     def test_upload_creates_release_when_missing(self):
         spec = importlib.util.spec_from_file_location("create_issue_module", SCRIPT)
         module = importlib.util.module_from_spec(spec)
