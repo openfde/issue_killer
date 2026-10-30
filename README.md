@@ -331,7 +331,7 @@ pi --no-session -p "回复 OK"
 pi
 ```
 
-- `gh auth status` 提示缺少 `read:org` 不影响 issue 读取；补 scope 后重建容器即可。
+- `gh auth status` 提示缺少 `read:org` 不影响 issue 读取、创建和 Release asset 上传（`repo` scope 足够）；发布脚本用 `gh api repos/<repo>` 校验仓库访问，补 scope 后重建容器即可。
 - 模型调用返回 `OK` 表示 provider/key 正常；其他模型替换 `--provider/--model`。
 
 容器内跑一条只读 skill 验证：
@@ -932,7 +932,7 @@ gh auth login -h github.com
 
 **`gh auth status` 提示缺少 `read:org`**
 
-issue 读取/列表/评论通常不受影响；补经典 PAT 的 `read:org`（或 fine-grained 的 Organization Members `Read`），重新授权后重建容器。
+issue 读取/列表/评论/创建和 Release asset 上传通常不受影响（`repo` scope 足够）；补经典 PAT 的 `read:org`（或 fine-grained 的 Organization Members `Read`），重新授权后重建容器。
 
 **组件归属失败或停在 `component_review_requested`**
 

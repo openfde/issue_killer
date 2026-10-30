@@ -48,8 +48,8 @@ description: 当取证草稿已生成、需要人工确认后自动创建 GitHub
 
 ## 权限
 
-- `GH_TOKEN`：Issues 写、Contents 写（release）
-- 先执行 `gh auth status`；失败即停止
+- `GH_TOKEN`：Issues 写、Contents 写（release）；classic token 的 `repo` scope 足够
+- 先执行 `gh api repos/<repo> --jq .full_name` 校验仓库访问；不要用 `gh auth status` 的退出码作为门槛——它可能因缺少 `read:org` 报错，但 `repo` scope 仍可创建 issue/release
 - 默认 release 在 issue 仓库；如果仓库私有，链接对无权限用户不可见，建议用 `--evidence-repo` 指向公开的 evidence 仓库
 
 ## 边界

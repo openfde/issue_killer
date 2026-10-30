@@ -95,6 +95,11 @@ class CreateIssueTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("--confirm", result.stderr)
 
+    def test_auth_check_uses_repo_api_not_auth_status(self):
+        source = SCRIPT.read_text(encoding="utf-8")
+        self.assertIn('["api", f"repos/{repo}", "--jq", ".full_name"]', source)
+        self.assertNotIn('["auth", "status"]', source)
+
     def test_publish_skill_wraps_confirm_and_attachments(self):
         skill = (ROOT / "skills" / "publish-intake-issue" / "SKILL.md").read_text(encoding="utf-8")
         for value in ("/skill:publish-intake-issue", "create_issue.py", "--dry-run", "--confirm", "Release asset", "附件"):

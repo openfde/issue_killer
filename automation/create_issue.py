@@ -266,9 +266,12 @@ def main() -> int:
         return 0
 
     if not args.dry_run:
-        auth = run_gh(["auth", "status"], timeout=30)
+        # ``gh auth status`` exits non-zero when a classic token lacks
+        # read:org, even though the repo scope is sufficient for issues and
+        # release assets. Check the repository itself instead.
+        auth = run_gh(["api", f"repos/{repo}", "--jq", ".full_name"], timeout=30)
         if auth.returncode != 0:
-            sys.stderr.write(auth.stderr or "gh auth status failed\n")
+            sys.stderr.write(auth.stderr or auth.stdout or "gh repository access check failed\n")
             return 1
 
         attachments_uploaded = False
