@@ -80,7 +80,7 @@ description: 当测试人员发现现象、需要在提 issue 前交互式采集
        [--evidence-repo <附件仓库>] [--evidence-tag intake-evidence] \
        [--evidence-url <外部链接>] [--label <标签>]
      ```
-   - 默认把 intake 目录中的取证文件上传为 Release asset（`intake-evidence` tag，资产名带 slug 前缀），并把链接写入正文 `## 取证包`；`--no-upload-attachments` 可关闭。
+   - 默认把 intake 目录中的取证文件上传为 Release asset（`intake-evidence` tag，资产名带 slug 前缀），并把链接写入正文 `## 取证包`；截图用 Markdown 图片语法内嵌，zip/文本用链接；`--no-upload-attachments` 可关闭。
    - 上传失败时脚本返回非零，**不要创建 issue**，也不要声称附件已上传；发布后报告 issue URL 和附件链接。不得自动关闭 issue、自动发评论、批量创建或继续整理。
 
 边界：除确认门中列出的日志开关 `setprop log.tag...`（及必要的 per-tag `setprop log.tag.<TAG>`）外，全程只读（bugreport/screencap/screenrecord/白名单 pull）；禁止 root、禁止 `logcat -c`、禁止安装/卸载/其他改设置；不得自动挑选设备；不得在 `.fde-ai/runs/` 创建产物。**默认不代提 issue**；仅当发布确认门选择 A 且调用方明确确认后，才创建 issue 正文；附件按配置处理，不得自动关闭、评论或批量创建。

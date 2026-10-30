@@ -32,6 +32,7 @@ DEFAULT_REPO = "openfde/openfde"
 DEFAULT_EVIDENCE_TAG = "intake-evidence"
 INTAKE_ROOT = "data/intake"
 METADATA_FILES = {"issue-draft.md", "title.txt", "summary.md", "issue.json"}
+IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg"}
 
 
 def utc_now() -> str:
@@ -181,7 +182,13 @@ def build_body(
     if marker not in body:
         body = body.rstrip() + "\n\n" + marker
 
-    links = [f"- [{item['name']}]({item['url']})" for item in attachments]
+    links = []
+    for item in attachments:
+        suffix = Path(item["name"]).suffix.lower()
+        if suffix in IMAGE_SUFFIXES:
+            links.append(f"![{item['name']}]({item['url']})")
+        else:
+            links.append(f"- [{item['name']}]({item['url']})")
     if evidence_url:
         links.append(f"- [外部取证链接]({evidence_url.strip()})")
     if links:

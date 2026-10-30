@@ -21,7 +21,7 @@
    python3 automation/create_issue.py --workspace . --intake <slug> --title "<标题>" --repo <repo> --confirm \
      [--evidence-repo <附件仓库>] [--evidence-tag intake-evidence] [--evidence-url <外部链接>] [--label <标签>]
    ```
-   **附件**：默认把 intake 目录中的取证文件上传到 GitHub Release asset（tag `intake-evidence`，资产名带 slug 前缀），并把链接写入正文 `## 取证包`；`--no-upload-attachments` 可关闭。上传失败时脚本返回非零，不创建 issue。发布后不得自动关闭、评论或批量创建。
+   **附件**：默认把 intake 目录中的取证文件上传到 GitHub Release asset（tag `intake-evidence`，资产名带 slug 前缀），并把链接写入正文 `## 取证包`；截图为 `png/jpg/jpeg/gif/webp/bmp/svg` 时使用 Markdown 图片语法内嵌，zip/文本仍用链接；`--no-upload-attachments` 可关闭。上传失败时脚本返回非零，不创建 issue。发布后不得自动关闭、评论或批量创建。
 
 ## 降级
 

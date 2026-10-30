@@ -57,7 +57,8 @@ class CreateIssueTests(unittest.TestCase):
         self.assertIn("2026-10-28-test-bugreport.zip", names)
         self.assertIn("2026-10-28-test-screen.png", names)
         self.assertTrue(all("releases/download/intake-evidence/" in item["url"] for item in payload["attachments"]))
-        self.assertIn("2026-10-28-test-bugreport.zip", payload["body_preview"])
+        self.assertIn("![2026-10-28-test-screen.png](", payload["body_preview"])
+        self.assertIn("- [2026-10-28-test-bugreport.zip](", payload["body_preview"])
         self.assertFalse((self.intake / "issue.json").exists())
 
     def test_no_upload_attachments_leaves_body_without_release_links(self):
