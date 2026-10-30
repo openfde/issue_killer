@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-10-30T06:31:01Z",
+  "cases": [
+    {
+      "issue": 500,
+      "title": "通过 Launcher 启动应用选择器时页面全屏并隐藏 Dock 与状态栏（CP2A.260605.016）",
+      "status": "confirmed_fixed",
+      "knowledge_status": "verified",
+      "verified": true,
+      "revision": 2,
+      "components": [
+        {
+          "project": "frameworks_base",
+          "local_path": "fde-sources/frameworks/base",
+          "confidence": "high"
+        },
+        {
+          "project": "platform/packages/modules/IntentResolver",
+          "local_path": "",
+          "confidence": "medium"
+        },
+        {
+          "project": "systemuiplugin",
+          "local_path": "fde-sources/packages/apps/BoringdroidSystemUI",
+          "confidence": "high"
+        },
+        {
+          "project": "packages_apps_launcher3",
+          "local_path": "fde-sources/packages/apps/Launcher3",
+          "confidence": "high"
+        }
+      ],
+      "signals": [],
+      "tags": [
+        "auto-hide",
+        "chooser",
+        "desktop-mode",
+        "display-policy",
+        "frameworks_base",
+        "resolver",
+        "window-manager",
+        "windowIsFloating"
+      ],
+      "updated_at": "2026-10-30T06:31:01Z",
+      "path": "500/case.json",
+      "source": "versioned"
+    }
+  ]
+}

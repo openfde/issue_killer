@@ -803,7 +803,9 @@ python3 automation/capture_knowledge_case.py --workspace . --issue <编号>
 
 产物：`data/knowledge/cases/<编号>/case.json`、`case.md`、`data/knowledge/index.json`。
 
-`retrieve-knowledge` 会先按组件/包名/log tag 检索 case 和 Wiki；`draft` 只作线索，已确认 case 才能作为知识引用。人工审核后：
+人工确认后，可把 verified case 导出到随源码发布的 `profiles/openfde/knowledge/cases/`（含 `index.json`）；运行时条目优先，导出规则见 [cases/README.md](profiles/openfde/knowledge/cases/README.md)。
+
+`retrieve-knowledge` 会先读版本化 case 索引和运行时索引，再按组件/包名/log tag 检索 case 和 Wiki；`draft` 只作线索，已确认 case 才能作为知识引用。人工审核后：
 
 ```text
 /skill:propose-knowledge ...

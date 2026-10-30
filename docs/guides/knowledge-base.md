@@ -1,15 +1,16 @@
 # 知识沉淀与组件导引
 
-本文说明 issue 处理后的知识如何落库、如何检索、如何晋升，以及模块分流指南如何使用。规则/模板在仓库内，运行时数据在 `data/knowledge/`（Docker 持久卷，不进入 Git）。
+本文说明 issue 处理后的知识如何落库、如何检索、如何晋升，以及模块分流指南如何使用。规则/模板和人工导出的已验证 case 在仓库内，运行时数据在 `data/knowledge/`（Docker 持久卷，不进入 Git）。
 
-## 1. 两条知识线
+## 1. 三条知识线
 
 | 知识线 | 位置 | 产生方式 | 可信度 |
 |---|---|---|---|
 | Case（自动、全量） | `data/knowledge/cases/<issue>/` | `archive-case` 归档时调用 `automation/capture_knowledge_case.py` | `draft`；只有 `confirmed_fixed` 才 `verified` |
+| 版本化 Case（源码种子） | `profiles/openfde/knowledge/cases/` | 人工从 verified 运行时 case 导出 | 随源码发布，可审计；同 issue 以运行时为准 |
 | Wiki（人工审核） | `data/knowledge/wiki/` | `propose-knowledge` 生成候选 → `promote-knowledge` 人工批准 | 已审核事实，带来源/验证人/过期时间 |
 
-Case 是“发生过什么”，Wiki 是“可以复用的项目事实”。两者都不替代原始证据和源码。
+运行时 Case 是“发生过什么”，版本化 Case 是已验证的可审计种子，Wiki 是“可以复用的项目事实”。它们都不替代原始证据和源码。
 
 ## 2. Case 自动采集
 
@@ -46,6 +47,16 @@ data/knowledge/
 
 脚本是幂等的，只生成 `draft`，不写 Wiki、不改 GitHub、不晋升知识。缺少 `archive/case.json` 时会失败，避免把空 case 写进知识库。
 
+人工确认后，可把 verified case 导出为随源码发布的版本化种子：
+
+```text
+profiles/openfde/knowledge/cases/
+├── index.json
+└── <编号>/{case.json,case.md}
+```
+
+只导出 `verified` case；同 issue 的运行时条目优先。维护规则见 [cases/README.md](../../profiles/openfde/knowledge/cases/README.md)。
+
 重建索引：
 
 ```bash
@@ -58,15 +69,16 @@ python3 automation/capture_knowledge_case.py --workspace . --rebuild-index
 
 `retrieve-knowledge` 的流程：
 
-1. 读 `data/knowledge/index.json`；
+1. 先读版本化 `profiles/openfde/knowledge/cases/index.json`，再读运行时 `data/knowledge/index.json`；同一 issue 以运行时为准；
 2. 按组件、包名/Activity/log tag、标签、版本、时间做结构化过滤；
-3. 读取匹配的 `cases/<issue>/case.json` 和 `wiki/*.md`；
-4. 写入 `analysis/knowledge-selection.json`，带路径、哈希、`verified`/`draft`、置信度、过期状态。
+3. 读取匹配的版本化/运行时 `case.json` 和 `wiki/*.md`；
+4. 写入 `analysis/knowledge-selection.json`，带路径、哈希、`verified`/`draft`、来源（`versioned`/`runtime`）、置信度、过期状态。
 
 规则：
 
 - `verification.verified=true` 或 `confirmed_fixed` 的 case 可以作为“已确认知识”；
 - `draft` case 只作为线索，必须标 `trust: draft`，不能据此下结论；
+- 版本化 case 只能是 verified 种子；不得把 draft 或含敏感信息的 case 导出到仓库；
 - 相似度只用于排序，不能当证据；每个结论仍引用证据/源码；
 - 没有命中是合法结果，记录空选择后继续。
 
